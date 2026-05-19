@@ -1,0 +1,15 @@
+; *****************************************************************************
+; *** Scatter-Loading Description File for STM32F4 with steck in CCM-memory ***
+; *****************************************************************************
+LR_IROM1 0x0 0x00100000 { ; load region size_region
+  ER_IROM1 0x0 0x00100000 { ; load address = execution address
+    *.o (RESET, +First)
+    *(InRoot$$Sections)
+    .ANY (+RO)
+    }
+  RW_IRAM1 0x20000000 0x00040000 { ; RW data
+    startup_k1921vk028.o (STACK)
+    .ANY (+RW +ZI)
+    }
+}
+
