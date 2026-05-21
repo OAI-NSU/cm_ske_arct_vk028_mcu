@@ -1,0 +1,29 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "defines": [
+                "_EXT_MEM_RLS_",
+                "__GNUC__=10",
+                "__GNUC_MINOR__=4",
+                "__GNUC_PATCHLEVEL__=0"
+            ],
+            "windowsSdkVersion": "10.0.18362.1",
+            "compilerPath": "C:/Keil_v5/ARM/ARMCLANG/bin/armclang.exe",
+            "cppStandard": "c++17",
+            "cStandard": "c99",
+            "intelliSenseMode": "clang-arm64",
+            "includePath": [
+                "${workspaceFolder}/Sources",
+                "${workspaceFolder}/Sources/CM4",
+                "${workspaceFolder}/CMSIS/Core/Include",
+                "${workspaceFolder}/TaskPlanner",
+                "C:/Keil_v5/ARM/ARMCC/include",
+                "C:/Keil_v5/ARM/PACK/NIIET/K1921VK028_DFP/1.1.3/Device/Include"
+            ],
+            "forcedInclude": [
+            ]
+        }
+    ],
+    "version": 4
+}
