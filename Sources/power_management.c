@@ -60,7 +60,7 @@ void pwr_init(typePower* pwr_ptr, typeADCStruct* adc_ptr, type_GPIO_OAI_cm *io_p
 	pwr_ptr->initialisation_flag = 1;
 	pwr_ptr->initialisation_timeout_ms = 0;
 	for (i=0; i<PWR_CH_NUMBER; i++){
-		pwr_queue_put_cmd(pwr_ptr, 0, i, PWR_CH_OFF, PWR_CH_HS_NOT_CHANGED);
+		pwr_queue_put_cmd(pwr_ptr, i*300, i, PWR_CH_OFF, PWR_CH_HS_NOT_CHANGED);
 	}
 	//
 	pwr_update_default_state(pwr_ptr);
@@ -403,7 +403,7 @@ type_PWR_CMD pwr_buffer_read(typePower* pwr_ptr)
 			//
 		}
 		// переменная для организации перебора команд. Если все команды выполнены, то возвращаем структуру с полем need_to_process = 0
-		pwr_ptr->cmd_buffer.last_cmd_num = (pwr_ptr->cmd_buffer.last_cmd_num < PWR_CH_NUMBER) ? (pwr_ptr->cmd_buffer.last_cmd_num+1) : (0);
+		pwr_ptr->cmd_buffer.last_cmd_num = (pwr_ptr->cmd_buffer.last_cmd_num < (PWR_CH_NUMBER-1)) ? (pwr_ptr->cmd_buffer.last_cmd_num+1) : (0);
 	}
 	return ret_cmd;
 }

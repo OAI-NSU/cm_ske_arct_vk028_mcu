@@ -18,6 +18,7 @@
   */
 void ib_init(typeIBStruct* ib_ptr)
 {
+	sprintf(ib_ptr->alias, "internal_bus");
 	ib_reset_parameters(ib_ptr);
 	ib_ptr->uart_inst = UART1;
 	ib_ptr->uart.init = UART_Init;
@@ -152,6 +153,9 @@ int8_t ib_run_transaction(typeIBStruct* ib_ptr, uint8_t dev_id, uint8_t f_code, 
 	}
 	memset(ib_ptr->rx_data, 0x00, sizeof(ib_ptr->rx_data));
 	if (ib_ptr->uart.get_packet(ib_ptr->uart_inst, ib_ptr->rx_data, (uint16_t*)&ib_ptr->rx_len)) {
+		if (ib_ptr->rx_len >= 128){
+			ib_ptr->error_counter += 1;
+		}
 		//
 		memset((uint8_t*)&ib_ptr->rx_frame, 0x00, sizeof(typeModBusFrameStruct));
 		//

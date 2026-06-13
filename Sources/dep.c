@@ -2,9 +2,9 @@
   ******************************************************************************
   * @file           : dep.c
   * @version        : v1.0
-  * @brief          : библиотека для управления модулем DEP, использует объект ВШ (internal_bus)
-  * @author			    : Стюф Алексей/Alexe Styuf <a-styuf@yandex.ru>
-  * @date						: 2021.10.01
+  * @brief          : библиотека для управления модулем DEP, использует объект ВШ (internal_bus), или объект МКО-контроллер шины
+  * @author			: Стюф Алексей/Alexe Styuf <a-styuf@yandex.ru>
+  * @date			: 2021.10.01
   ******************************************************************************
   */
 
@@ -17,17 +17,28 @@
 	* @param  device_number номер устройства в котором работает МПП
 	* @param  frame_type тип кадра для МПП
 	* @param  ib_ptr указатель на внутреннюю шину
-	* @param  gl_fr_num указатель на сковозной глобальный номер кадра
+	* @param  mko_bc_ptr указатель на контроллер шины МКО
+	* @param  gl_fr_num указатель на сквозной глобальный номер кадра
   */
-void dep_init(typeDEPStruct* dep_ptr, uint8_t self_num, uint8_t id, uint16_t device_number, uint16_t frame_type, typeIBStruct* ib_ptr, uint32_t* gl_fr_num)
+void dep_init(  typeDEPStruct* dep_ptr, 
+                uint8_t self_num, 
+                uint8_t id, 
+                uint16_t device_number, 
+                uint16_t frame_type, 
+                typeIBStruct* ib_ptr, 
+                typeMKOBCStruct* mko_bc_ptr, 
+                uint32_t* gl_fr_num, 
+                uint8_t mode)
 {
 	dep_reset_parameters(dep_ptr);
 	dep_ptr->id = id;
 	dep_ptr->device_number = device_number;
 	dep_ptr->frame_type = frame_type;
-	dep_ptr->ib = ib_ptr;
+	dep_ptr->ib_ptr = ib_ptr;
+	dep_ptr->mko_bc_ptr = mko_bc_ptr;
 	dep_ptr->self_num = self_num;
 	dep_ptr->global_frame_num_ptr = gl_fr_num;
+	dep_ptr->mode = mode;
 	// работы с циклограммами
 	dep_meas_cycl_init(dep_ptr);
 }
@@ -41,11 +52,13 @@ void dep_reset_parameters(typeDEPStruct* dep_ptr)
 	//зануление данных на передачу в МКО и память
 	memset((uint8_t*)&dep_ptr->frame, 0xFE, sizeof(dep_ptr->frame));
 	memset((uint8_t*)&dep_ptr->mko_frame, 0xFE, sizeof(dep_ptr->frame));
+	memset((uint8_t*)&dep_ptr->dep_ad_frame, 0xFE, sizeof(dep_ptr->dep_ad_frame));
 	dep_ptr->frame_data_ready = 0x00;
 	//
 	memset((uint8_t*)dep_ptr->rec_fifo, 0xFE, sizeof(dep_ptr->rec_fifo));
 	dep_ptr->rec_num = 0;
 	dep_ptr->rec_max = 0;
+	dep_ptr->mode = DEP_MODE_IB;
 	//
 	dep_ptr->last_call_time_us = 0;
 	dep_ptr->meas_event_num = 0;
@@ -169,11 +182,21 @@ void dep_mko_frame_forming(typeDEPStruct* dep_ptr)
   */
 void dep_constant_mode(typeDEPStruct* dep_ptr, uint32_t on_off)
 {
-	uint16_t data[2];
+	uint16_t data[4] = {0};
 	dep_ptr->const_mode = (on_off) ? 0x01 : 0x00;
-	data[0] = __REV16((2 << 8) | (255));
-	data[1] = __REV16(dep_ptr->const_mode); 
-	ib_run_transaction(dep_ptr->ib, dep_ptr->id, 16, 0, 2, data);
+
+	if (dep_ptr->mode == DEP_MODE_IB){
+		data[0] = __REV16((2 << 8) | (255));
+		data[1] = __REV16(dep_ptr->const_mode); 
+		ib_run_transaction(dep_ptr->ib_ptr, dep_ptr->id, 16, 0, 2, data);
+	}
+	else if (dep_ptr->mode == DEP_MODE_MKO){
+		data[0] = 0x0006;
+		data[1] = 0x0001;
+		data[2] = 0x0000;
+		data[3] = 0x0000;
+		mko_bc_transaction_start_with_bus_find(dep_ptr->mko_bc_ptr, MKO_BC_MODE_WRITE, dep_ptr->id, 17, data, 4);
+	}
 }
 
 /**
@@ -184,9 +207,18 @@ void dep_constant_mode(typeDEPStruct* dep_ptr, uint32_t on_off)
   */
 void dep_start(typeDEPStruct *dep_ptr, uint16_t meas_num) 
 {
-	uint16_t data[6];
-	data[0] = (meas_num);
-	ib_run_transaction(dep_ptr->ib, dep_ptr->id, MB_F_CODE_6, 0x1000, 1, data);
+	uint16_t data[4];
+	if (dep_ptr->mode == DEP_MODE_IB){
+		data[0] = (meas_num);
+		ib_run_transaction(dep_ptr->ib_ptr, dep_ptr->id, MB_F_CODE_6, 0x1000, 1, data);
+	}
+	else if (dep_ptr->mode == DEP_MODE_MKO){
+		data[0] = 0x0004;
+		data[1] = 0x0002;
+		data[2] = 0x0000;
+		data[3] = 0x0000;
+		mko_bc_transaction_start_with_bus_find(dep_ptr->mko_bc_ptr, MKO_BC_MODE_WRITE, dep_ptr->id, 17, data, 4);
+	}
 }
 
 /**
@@ -195,9 +227,18 @@ void dep_start(typeDEPStruct *dep_ptr, uint16_t meas_num)
   */
 void dep_stop(typeDEPStruct *dep_ptr)
 {
-	uint16_t data[2];
-	data[0] = (0x0000);
-	ib_run_transaction(dep_ptr->ib, dep_ptr->id, MB_F_CODE_16, 0x1000, 1, data);
+	uint16_t data[4];
+	if (dep_ptr->mode == DEP_MODE_IB){
+		data[0] = (0x0000);
+		ib_run_transaction(dep_ptr->ib_ptr, dep_ptr->id, MB_F_CODE_16, 0x1000, 1, data);
+	}
+	else if (dep_ptr->mode == DEP_MODE_MKO){
+		data[0] = 0x0004;
+		data[1] = 0x0000;
+		data[2] = 0x0000;
+		data[3] = 0x0000;
+		mko_bc_transaction_start_with_bus_find(dep_ptr->mko_bc_ptr, MKO_BC_MODE_WRITE, dep_ptr->id, 17, data, 4);
+	}
 }
 
 /**
@@ -210,34 +251,64 @@ void dep_read_data(typeDEPStruct *dep_ptr)
 	uint8_t i=0;
 	uint16_t received_dep_measurments;
 	typeDEPAcqValue tmp_rec;
+	volatile typeDepAdFrameUnion dep_ad_frame_raw;
 	//
-	if (ib_run_transaction(dep_ptr->ib, dep_ptr->id, MB_F_CODE_3, 0x2000, 1+4*3, NULL) > 0) { // запрашиваем 3 измерения, что бы почистить буфер
-		ib_get_answer_data(dep_ptr->ib, in_data, 2*(1+4*3));
-		received_dep_measurments = __REV16(*(uint16_t*)&in_data[0]);
-		//
-		if (received_dep_measurments != 0) {
-			tmp_rec = *(typeDEPAcqValue*)&in_data[2+i*sizeof(typeDEPAcqValue)];
+	if (dep_ptr->mode == DEP_MODE_IB){
+		if (ib_run_transaction(dep_ptr->ib_ptr, dep_ptr->id, MB_F_CODE_3, 0x2000, 1+4*3, NULL) > 0) { // запрашиваем 3 измерения, что бы почистить буфер
+			ib_get_answer_data(dep_ptr->ib_ptr, in_data, 2*(1+4*3));
+			received_dep_measurments = __REV16(*(uint16_t*)&in_data[0]);
+			//
+			if (received_dep_measurments != 0) {
+				tmp_rec = *(typeDEPAcqValue*)&in_data[2+i*sizeof(typeDEPAcqValue)];
 
-			dep_ptr->last_meas.Evalue_dep1 = __REV16(tmp_rec.Evalue_dep1);
-			dep_ptr->last_meas.Dvalue_dep1 = tmp_rec.Dvalue_dep1;
-			dep_ptr->last_meas.Temp_dep1 = tmp_rec.Temp_dep1;
-			dep_ptr->last_meas.Evalue_dep2 = __REV16(tmp_rec.Evalue_dep2);
-			dep_ptr->last_meas.Dvalue_dep2 = tmp_rec.Dvalue_dep2;
-			dep_ptr->last_meas.Temp_dep2 = tmp_rec.Temp_dep2;
+				dep_ptr->last_meas.Evalue_dep1 = __REV16(tmp_rec.Evalue_dep1);
+				dep_ptr->last_meas.Dvalue_dep1 = tmp_rec.Dvalue_dep1;
+				dep_ptr->last_meas.Temp_dep1 = tmp_rec.Temp_dep1;
+				dep_ptr->last_meas.Evalue_dep2 = __REV16(tmp_rec.Evalue_dep2);
+				dep_ptr->last_meas.Dvalue_dep2 = tmp_rec.Dvalue_dep2;
+				dep_ptr->last_meas.Temp_dep2 = tmp_rec.Temp_dep2;
 
-			if (dep_write_fifo(dep_ptr, &dep_ptr->last_meas) > 0) {
-				dep_ptr->last_field[0] = __dep_field_calculate(dep_ptr->last_meas.Evalue_dep1);
-				dep_ptr->last_field[1] = __dep_field_calculate(dep_ptr->last_meas.Evalue_dep2);
-				dep_ptr->last_freq[0] = __dep_freq_calculate(dep_ptr->last_meas.Dvalue_dep1);
-				dep_ptr->last_freq[1] = __dep_freq_calculate(dep_ptr->last_meas.Dvalue_dep2);
-			}
-			else{
-				//обработка ошибки перезаполениня буфера
+				if (dep_write_fifo(dep_ptr, &dep_ptr->last_meas) > 0) {
+					dep_ptr->last_field[0] = __dep_field_calculate(dep_ptr->last_meas.Evalue_dep1);
+					dep_ptr->last_field[1] = __dep_field_calculate(dep_ptr->last_meas.Evalue_dep2);
+					dep_ptr->last_freq[0] = __dep_freq_calculate(dep_ptr->last_meas.Dvalue_dep1);
+					dep_ptr->last_freq[1] = __dep_freq_calculate(dep_ptr->last_meas.Dvalue_dep2);
+				}
+				else{
+					//обработка ошибки перезаполениня буфера
+				}
 			}
 		}
+		else {
+			//todo: возможно необходимо сделать обработку непринятия пакета с данными
+		}
 	}
-	else {
-		//todo: возможно необходимо сделать обработку непринятия пакета с данными
+	else if (dep_ptr->mode == DEP_MODE_MKO){
+		if (mko_bc_transaction_start_with_bus_find(dep_ptr->mko_bc_ptr, MKO_BC_MODE_READ, dep_ptr->id, 2, (uint16_t*)&dep_ad_frame_raw, 32)) {
+			memcpy((uint8_t*)&dep_ptr->dep_ad_frame, (uint8_t*)&dep_ad_frame_raw, sizeof(typeDepAdFrameUnion));
+		}
+		else{
+			memset((uint8_t*)&dep_ptr->dep_ad_frame, 0xFE, sizeof(dep_ptr->dep_ad_frame));
+		}
+
+		tmp_rec = dep_ad_frame_raw.dep.meas[0];//*(typeDEPAcqValue*)&in_data[2+i*sizeof(typeDEPAcqValue)];
+
+		dep_ptr->last_meas.Evalue_dep1 = tmp_rec.Evalue_dep1;
+		dep_ptr->last_meas.Dvalue_dep1 = tmp_rec.Dvalue_dep1;
+		dep_ptr->last_meas.Temp_dep1 = tmp_rec.Temp_dep1;
+		dep_ptr->last_meas.Evalue_dep2 = tmp_rec.Evalue_dep2;
+		dep_ptr->last_meas.Dvalue_dep2 = tmp_rec.Dvalue_dep2;
+		dep_ptr->last_meas.Temp_dep2 = tmp_rec.Temp_dep2;
+
+		if (dep_write_fifo(dep_ptr, &dep_ptr->last_meas) > 0) {
+			dep_ptr->last_field[0] = __dep_field_calculate(dep_ptr->last_meas.Evalue_dep1);
+			dep_ptr->last_field[1] = __dep_field_calculate(dep_ptr->last_meas.Evalue_dep2);
+			dep_ptr->last_freq[0] = __dep_freq_calculate(dep_ptr->last_meas.Dvalue_dep1);
+			dep_ptr->last_freq[1] = __dep_freq_calculate(dep_ptr->last_meas.Dvalue_dep2);
+		}
+		else{
+			//обработка ошибки перезаполениня буфера
+		}
 	}
 }
 

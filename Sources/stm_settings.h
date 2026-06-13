@@ -8,7 +8,7 @@
 */
 typedef enum stm_list
 {
-	KPBE, NORMCM, AMKO, 
+	STM_KTPSKE, STM_KNPSKE, STM_KPSKE, 
 	STM_NUM
 } stm_list;
 

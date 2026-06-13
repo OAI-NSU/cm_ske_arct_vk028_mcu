@@ -61,7 +61,7 @@ void cm_init(
 	//
 	cm_ptr->half_set_num = gpio_get(cm_ptr->hs_io_ptr);
 	cm_set_clear_status(cm_ptr, CM_STATUS_CFG_HALF_SET, cm_ptr->half_set_num & 0x01);
-	stm_single_ch_const_set(cm_ptr->stm_ptr, NORMCM, 1);
+	stm_single_ch_const_set(cm_ptr->stm_ptr, STM_KNPSKE, 1);
 	//
 	cm_ptr->device_number = device_number;
 	cm_ptr->sw_version = get_version_from_str(ver_str);
@@ -72,7 +72,7 @@ void cm_init(
 	// передача информации в дочерние структуры
 	// управление каналами питания: TODO: перенести данную инициализацию в pwr_management.c
 	if(load_cfg_state >= 0) {
-		pwr_change_default_state(cm_ptr->pwr_ptr, cm_ptr->loaded_cfg.cfg.body.power_state);
+		// pwr_change_default_state(cm_ptr->pwr_ptr, cm_ptr->loaded_cfg.cfg.body.power_state);
 	}
 	//
 	cm_constant_mode_ena(cm_ptr, 0x00);
@@ -535,11 +535,6 @@ void cm_frame_forming(typeCMModel* cm_ptr)
 		cm_ptr->frame.sys.body.rst_cnter = cm_ptr->ctrl.rst_cnter & 0xFF;
 		//
 		cm_ptr->frame.sys.body.operation_time = _rev_u32_by_u16(cm_ptr->ctrl.operation_time);
-		//
-		cm_ptr->frame.sys.body.diff_time = cm_ptr->ctrl.diff_time;
-		cm_ptr->frame.sys.body.diff_time_fractional = cm_ptr->ctrl.diff_time_fractional;
-		cm_ptr->frame.sys.body.sync_num = cm_ptr->ctrl.sync_num & 0xFF;
-		cm_ptr->frame.sys.body.sync_time_s = _rev_u32_by_u16(cm_ptr->ctrl.sync_time_s);
 		//
 		cm_ptr->frame.sys.body.stm_val = cm_ptr->stm_ptr->state;
 		cm_ptr->frame.sys.body.mcu_temp = 0xFE;

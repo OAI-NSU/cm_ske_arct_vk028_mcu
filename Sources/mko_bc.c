@@ -24,6 +24,8 @@ uint16_t MKOIVect;
   */
 void mko_bc_init(typeMKOBCStruct *mko_ptr) 
 {
+  //  
+  sprintf(mko_ptr->alias, "mko_bc");
   // аппаратная настройка ядра МПИ
   RCU->HRSTCFG |= RCU_HRSTCFG_GPIOKEN_Msk;  RCU->HCLKCFG |= RCU_HCLKCFG_GPIOKEN_Msk;
   //
@@ -146,7 +148,7 @@ uint32_t mko_bc_tx(typeMKOBCStruct *mko_ptr,uint8_t rt_addr, uint8_t subaddr, ui
   * @param  addr адрес устройства
   * @param  subaddr номер субадреса
   * @param  data данные для записи (длина - 32 слова)
-  * @param  leng количество данных
+  * @param  leng количество данных в словах данных (2 Б)
 	* @retval 1 - норма, 0 - ошибка
   */
 uint8_t mko_bc_transaction_start_with_bus_find(typeMKOBCStruct *mko_ptr, uint8_t mode, uint8_t addr, uint8_t subaddr, uint16_t* data, uint8_t leng)

@@ -28,6 +28,9 @@ typedef struct
   */
 typedef struct
 {
+  // псевдоним
+  char alias[32];           //! псевдоним канала для разбора и формирования отчетов
+  //
   type_GPIO_OAI_cm *cm_io_ptr;
   //
   type_STM_Channel_Model ch[STM_NUM];

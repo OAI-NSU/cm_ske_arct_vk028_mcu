@@ -22,7 +22,7 @@
 //***Общие настройки***//
 
 //версия прошивки
-#define CM_SW_VERSION 			  "0.01"
+#define CM_SW_VERSION 			  "0.02"
 // номер устройства
 #define FRAME_DEV_ID 			    231 // (230 - отработочный как в СКЭ-Луна)
 
@@ -40,7 +40,7 @@ typeMKOBCStruct mko_bc;
 //
 typeMPPStruct mpp[MPP_DEV_NUM];   //! программная модель периферийных модулей МПП
 typeGEN_MPP_Struct gmpp;          
-// typeDEPADStruct dep_ad[6];
+typeDEPStruct dep[6];
 // typeMKKDStruct mkkd;
 //
 void SystemCoreClockUpdate(void);
@@ -83,29 +83,49 @@ void __main_init_peripheral_modules(void)
 	uint32_t mpp_ch_num[MPP_DEV_NUM] = MPP_CHAN_NUM;
 	float mpp_ch_k[MPP_DEV_NUM] = MPP_CHAN_K;
 	float mpp_ch_b[MPP_DEV_NUM] = MPP_CHAN_B;
+
+  uint32_t dep_id[DEP_AD8 - DEP_AD1 + 1] = { 1, 2, 3, 4, 5, 6, 7, 8};
+  uint32_t dep_sa[DEP_AD8 - DEP_AD1 + 1] = {  CM_MKO_SA_DEP_AD1, 
+                                              CM_MKO_SA_DEP_AD2, 
+                                              CM_MKO_SA_DEP_AD3, 
+                                              CM_MKO_SA_DEP_AD4, 
+                                              CM_MKO_SA_DEP_AD5, 
+                                              CM_MKO_SA_DEP_AD6, 
+                                              CM_MKO_SA_DEP_AD7, 
+                                              CM_MKO_SA_DEP_AD8};
+
 	uint8_t uint8_var = 0;
 	/**
 	 * @brief  цикл используется для последовательной нумерации схожих устройств. Использование необязательно
 	 */
 	for (uint8_var = 0; uint8_var<MPP_DEV_NUM; uint8_var++){
     if(MPP1 + uint8_var <= MPP_DEV_NUM){
-        mpp_init(	&mpp[uint8_var], 
-              MPP1 + uint8_var, 
-              mpp_ib_id[uint8_var], 
-              FRAME_DEV_ID, 
-              CM_MKO_SA_MPP1 + uint8_var, 
-              mpp_ch_num[uint8_var], 
-              mpp_offsets_array[uint8_var], 
-              cm.ib_ptr, 
-              &cm.global_frame_num,
-              MPP_TYPE_MPP);
-        mpp_set_calibr(&mpp[uint8_var], mpp_ch_k[uint8_var], mpp_ch_b[uint8_var]);
+      mpp_init(	&mpp[uint8_var], 
+                uint8_var, 
+                mpp_ib_id[uint8_var], 
+                FRAME_DEV_ID, 
+                CM_MKO_SA_MPP1 + uint8_var, 
+                mpp_ch_num[uint8_var], 
+                mpp_offsets_array[uint8_var], 
+                cm.ib_ptr, 
+                &cm.global_frame_num,
+                MPP_TYPE_MPP);
+      mpp_set_calibr(&mpp[uint8_var], mpp_ch_k[uint8_var], mpp_ch_b[uint8_var]);
     }
 	}
   gmpp_init(&gmpp, GMPP, FRAME_DEV_ID, CM_MKO_SA_MATRIX, CM_MKO_SA_WIND, &cm.global_frame_num, mpp);
 	
-  // TODO: реализовать инициализацию
-  // dep_ad_init(&dep_ad, DEP_AD, 10, FRAME_DEV_ID, CM_MKO_SA_DEP, cm.ib_ptr, &cm.global_frame_num);
+  for (uint8_var = DEP_AD1; uint8_var <= DEP_AD8; uint8_var++){
+    dep_init( &dep[uint8_var - DEP_AD1], 
+              uint8_var, 
+              dep_id[uint8_var - DEP_AD1], 
+              FRAME_DEV_ID, 
+              dep_sa[uint8_var - DEP_AD1],
+              cm.ib_ptr,
+              cm.mko_bc_ptr,
+              &cm.global_frame_num,
+              DEP_MODE_MKO );
+  }
 	// mkkd_init(&mkkd, MKKD, 10, FRAME_DEV_ID, CM_MKO_SA_DND, cm.ib_ptr, &cm.global_frame_num);
 }
 
@@ -125,9 +145,12 @@ void __main_process_registration_box(void)
 	for (uint8_t uint8_var = 0; uint8_var < MPP_DEV_NUM; uint8_var++){
 		tp_process_registration(&tp, &mpp_process_tp, &mpp[uint8_var], 128*(MPP1+uint8_var), 128);
 	}
-  tp_process_registration(&tp, &gmpp_process_tp, &gmpp, 128*GMPP, 128);
-  //TODO: добавить ДЭП-АД и МККД
-	// tp_process_registration(&tp, &dep_process_tp, &dep, 128*(DEP), 128);
+
+  for (uint8_t uint8_var = 0; uint8_var < MPP_DEV_NUM; uint8_var++){
+		tp_process_registration(&tp, &dep_process_tp, &dep[uint8_var], 128*(DEP_AD1+uint8_var), 128);
+	}
+  // tp_process_registration(&tp, &gmpp_process_tp, &gmpp, 128*GMPP, 128);
+  //TODO: добавить МККД
 	// tp_process_registration(&tp, &dir_process_tp, &dir, 128*(DIR), 128);
 }
 
@@ -174,7 +197,7 @@ void __main_base_init(void)
             &mko_bc,
             &ib,
             &pwr,
-            &gpio.io[17],
+            &gpio.io[14],
             &stm,
             FRAME_DEV_ID,
             CM_SW_VERSION,
@@ -199,7 +222,7 @@ void __main_base_init(void)
  */
 void cm_dbg_ib_command_handler(typeCMModel* cm_ptr)
 {
-	typeFrameStruct frame;
+	// typeFrameStruct frame;
 	//
 	if (cm_ptr->ib_ptr->command_frame_flag){
 		cm_ptr->ib_ptr->command_frame_flag = 0;

@@ -175,6 +175,9 @@ typedef union
 
 typedef struct
 {
+	// псевдоним
+  	char alias[32];           //! псевдоним канала для разбора и формирования отчетов
+	//
 	MILSTD_TypeDef_Simple *inst;
 	//
 	volatile typeMKOBC_DescList* MKOBC_DescListRx_ptr;

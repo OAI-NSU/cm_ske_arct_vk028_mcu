@@ -78,7 +78,7 @@ typedef struct
 {
   //
   uint16_t self_num;          // номер устройства с точки зрения ЦМ
-	const typeMPPStruct* mpp[6];
+	const typeMPPStruct* mpp[MPP_DEV_NUM];
   //
   uint16_t device_number, win_frame_type, mtrx_frame_type;  //параметры прибора МПП, в котором он используется
   uint32_t *global_frame_num_ptr;

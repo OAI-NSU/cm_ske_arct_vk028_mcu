@@ -24,8 +24,8 @@ typedef enum devices_list
 {
 	CM, 		MPP1, 		MPP2, 		MPP3,
 	MPP4, 		DEP_AD1, 	DEP_AD2, 	DEP_AD3,
-	DEP_AD4, 	DEP_AD5, 	DEP_AD6, 	MKKD,
-	GMPP, 
+	DEP_AD4, 	DEP_AD5, 	DEP_AD6, 	DEP_AD7,
+	DEP_AD8, 	MKKD, 		GMPP, 
 	DEV_NUM
 } device_list;
 
@@ -39,8 +39,8 @@ enum cm_interval_list
 	CM_1S_INTERVAL,
 	CM_INTERV_NUMBER
 };
-#define DEFAULT_CM_INTERV_VALUES_S					{10, 10, 1, 30, 1}
-#define DEFAULT_CM_DEFAULT_START_TIME_S				{5, 5, 0, 6, 6}
+#define DEFAULT_CM_INTERV_VALUES_S					{10, 	120, 	1, 		10, 	1}
+#define DEFAULT_CM_DEFAULT_START_TIME_S				{10, 	10,		0, 		11, 	11}
 
 #define CM_EVENT_MEAS_INTERVAL_START       			(1<<0)
 #define CM_EVENT_MEAS_INTERVAL_DATA_READY  			(1<<1)
@@ -83,15 +83,17 @@ enum cm_interval_list
 #define CM_MKO_SA_DEP_AD4 							(11)
 #define CM_MKO_SA_DEP_AD5 							(12)
 #define CM_MKO_SA_DEP_AD6 							(13)
+#define CM_MKO_SA_DEP_AD7 							(14)
+#define CM_MKO_SA_DEP_AD8 							(15)
 
-#define CM_MKO_SA_MKKD     							(14)
-
-#define CM_MKO_SA_ARCH_READ_CM						(0x0E)  //TODO: Проверить нумерацию подадресов
+#define CM_MKO_SA_MKKD     							(16)
 
 #define CM_MKO_SA_CMD								(0x11)
 
 #define CM_MKO_SA_ARCH_REQUEST_CM					(0x12)
 #define CM_MKO_SA_ARCH_REQUEST_MPP					(0x13)
+
+#define CM_MKO_SA_ARCH_READ_CM						(0x14)  //TODO: Проверить нумерацию подадресов
 
 #define CM_MKO_SA_TECH_CMD							(0x1E)
 #define CM_MKO_SA_TECH_RD							(0x1C)
@@ -153,30 +155,25 @@ typedef  struct
 {
 	// питание
 	uint16_t currents[PWR_CH_NUMBER];   //+0
-	uint16_t power_status;				//+10
-	uint16_t power_state;				//+12
+	uint16_t power_status;				//+26
+	uint16_t power_state;				//+28
 	//
-	uint8_t nans_counter;  				//+14
-	uint8_t nans_status;  				//+15
-	uint8_t rst_cnter;  				//+16
-	uint8_t cm_status;		  			//+17
+	uint8_t nans_counter;  				//+30
+	uint8_t nans_status;  				//+31
+	uint8_t rst_cnter;  				//+32
+	uint8_t cm_status;		  			//+33
 	//
-	uint32_t operation_time;  			//+18
+	uint32_t operation_time;  			//+34
 	//
-	int16_t diff_time;					//+22
-	uint8_t sync_num;					//+25
-	uint8_t diff_time_fractional;		//+24
-	uint32_t sync_time_s;				//+26
+	int8_t stm_val;						//+38
+	int8_t mcu_temp;					//+39
 	//
-	int8_t stm_val;						//+31
-	int8_t mcu_temp;					//+30
+	uint16_t read_ptr;					//+40
+	uint16_t write_ptr; 				//+42
 	//
-	uint16_t read_ptr;					//+32
-	uint16_t write_ptr; 				//+34
+	uint16_t sw_version;				//+44
 	//
-	uint16_t sw_version;				//+36
-	//
-	uint8_t reserve[14];				//+38
+	uint8_t reserve[6]; 				//+46
 }typeCMFrameReport;	//! 52 - общая длина
 
 #pragma pack(pop)

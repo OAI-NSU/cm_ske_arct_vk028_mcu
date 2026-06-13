@@ -65,16 +65,6 @@ enum stm_enum
   STM_IO_NUM
 };
 
-/**
- * @brief раскрашивание ног по функциональному назначению для БДК2М
- * 
- */
-enum stm_func_enum
-{
-  STM_KTPSKE, STM_KNPSKE, STM_KPSKE
-};
-
-// специальная переменная, при передачи в функции управления GPIO делает ничего
 
 // сопоставление имени порта со сквозным номером универсального IO
 #define GPIO_PORT { GPIOL, GPIOL, GPIOL, GPIOL, \

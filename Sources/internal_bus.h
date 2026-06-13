@@ -49,7 +49,7 @@
 #define MB_TRANSACTION_READ					0x01
 #define MB_TRANSACTION_IDLE 				0x00
 
-#define MB_BUFFER_SIZE              128
+#define MB_BUFFER_SIZE              512
 
 
 #pragma pack(push, 2)
@@ -78,7 +78,7 @@ typedef struct{
 	uint16_t reg_addr;
 	uint16_t reg_cnt;
 	uint8_t byte_cnt;
-	uint16_t data[128];
+	uint16_t data[MB_BUFFER_SIZE];
 	uint16_t crc_16;
 	uint8_t error_code;
 	uint8_t type;
@@ -89,6 +89,9 @@ typedef struct{
   */
 typedef struct
 {
+  // псевдоним
+  char alias[32];           //! псевдоним канала для разбора и формирования отчетов
+  //
   typeUARTInterface uart;
   UART_TypeDef *uart_inst;
   typeModBusFrameStruct rx_frame, tx_frame, command_frame;

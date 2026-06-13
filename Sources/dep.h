@@ -5,6 +5,7 @@
 #include "main.h"
 #include "math.h"
 #include "internal_bus.h"
+#include "mko_bc.h"
 #include "task_planner.h"
 #include "cyclogramma.h"
 #include "frames.h"
@@ -17,6 +18,13 @@
 #define DEP_EVENT_MEAS_INTERVAL_DATA_READY  (1<<1)
 
 #define DEP_REC_FIFO_DEPTH 8
+
+//номер режимов ДЭП
+enum dep_mode_enum
+{
+	DEP_MODE_IB, DEP_MODE_MKO,
+  DEP_MODE_NUM
+};
 
 // структуры данных
 #pragma pack(push, 2)
@@ -45,6 +53,21 @@ typedef struct
 }typeDEPAcqValue;             //8
 
 /** 
+  * @brief  структура кадр ДEП-АД через МКО, в виде, как передает ДЭП-АД
+  */
+typedef union{
+  typeFrameStruct raw;
+  struct{
+    uint16_t header[5];
+    //
+    typeDEPAcqValue meas[6]; //+10-57 5-28
+    uint8_t reserve[4]; //+58
+    //
+    uint16_t crc16; //+62
+  } dep;
+}typeDepAdFrameUnion;
+
+/** 
   * @brief  структура кадар ДЭП
   */
 typedef union{
@@ -66,14 +89,17 @@ typedef union{
 typedef struct
 {
   // interfaces
-  typeIBStruct* ib;
+  typeIBStruct* ib_ptr;
+  typeMKOBCStruct* mko_bc_ptr;
   // сfg
-	uint16_t id;			          // id на внутренней шине
+	uint16_t id;			          // id на внутренней шине или адрес МКО
 	uint16_t self_num;          // номер устройства с точки зрения ЦМ
 	uint16_t device_number, frame_type;  //параметры прибора, в котором он используется
   uint16_t interval_ms;
   uint16_t const_mode;
   uint32_t *global_frame_num_ptr;
+  // выбор режима
+  uint8_t mode;
   // to task_planner
   uint8_t meas_event_num;
   uint64_t last_call_time_us;
@@ -83,6 +109,8 @@ typedef struct
   typeDEPProcess ch[2];
   typeDEPAcqValue last_meas;
   float last_field[2], last_freq[2];
+  // mko data
+  typeDepAdFrameUnion dep_ad_frame;
   // fifo для обработки данных ДЭП
   typeDEPAcqValue rec_fifo[DEP_REC_FIFO_DEPTH];
   uint8_t rec_num, rec_max;
@@ -98,7 +126,15 @@ typedef struct
 #pragma pack(pop)
 
 //
-void dep_init(typeDEPStruct* dep_ptr, uint8_t self_num, uint8_t id, uint16_t device_number, uint16_t frame_type, typeIBStruct* ib_ptr, uint32_t* gl_fr_num);
+void dep_init(  typeDEPStruct* dep_ptr, 
+                uint8_t self_num, 
+                uint8_t id, 
+                uint16_t device_number, 
+                uint16_t frame_type, 
+                typeIBStruct* ib_ptr, 
+                typeMKOBCStruct* mko_bc_ptr, 
+                uint32_t* gl_fr_num, 
+                uint8_t mode);
 void dep_reset_parameters(typeDEPStruct* dep_ptr);
 //
 int8_t dep_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceStruct* interface);

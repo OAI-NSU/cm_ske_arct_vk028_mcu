@@ -99,6 +99,8 @@ void stm_init(type_STM_Model *stm_ptr, type_GPIO_OAI_cm* cm_io_ptr)
   uint8_t stm_io_num[STM_NUM] = STM_CM_IO_NUM;
   uint8_t stm_default_val[STM_NUM] = STM_DEFAULT_VAL;
   //  
+  sprintf(stm_ptr->alias, "stm");
+  //
   stm_ptr->state = 0x00;
   stm_ptr->state_old = 0x00;
   stm_ptr->cm_io_ptr = cm_io_ptr;

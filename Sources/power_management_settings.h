@@ -44,9 +44,10 @@ typedef enum PWR_CH
                                   PWR_CH_OFF, PWR_CH_OFF, PWR_CH_ON, PWR_CH_ON, \
                                   PWR_CH_ON,  PWR_CH_ON,  PWR_CH_ON, PWR_CH_ON, \
                                   PWR_CH_ON }
+
 #define PWR_DEFAULT_HALF_SET    { 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 0, 0,  0 }
-#define PWR_INIT_TIMEOUT_MS     ( 5000 )
-#define PWR_DEFAULT_DELAY       { 0, 0,  100, 200, 300, 400,  500, 600, 700, 800, 900, 1000,  1100 }
+#define PWR_INIT_TIMEOUT_MS     ( 10000 )
+#define PWR_DEFAULT_DELAY       { 0, 0,  1*300, 2*300, 3*300, 4*300,  6*300, 7*300, 8*300, 9*300, 10*300, 11*300,  13*300 }
 
 // Конфигурация GPIO - это массив из 5-ти GPIO: 
 // PWR_CH_CTRL_NU - не используются
