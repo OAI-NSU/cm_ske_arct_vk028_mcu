@@ -10,33 +10,33 @@
 #include "task_planner.h"
 
 // дефайны для переменных
-#define IB_UART_BAUDRATE            125000
+#define IB_UART_BAUDRATE                  125000
 
 #define IB_PROCESS_PERIOD           100
 //
-#define IB_UART_TIMEOUT_MS							15
+#define IB_UART_TIMEOUT_MS							  15
 
-#define IB_FRAME_TYPE_RX                0x01
-#define IB_FRAME_TYPE_TX                0x02
-#define IB_FRAME_TYPE_ERROR             0x03
+#define IB_FRAME_TYPE_RX                  0x01
+#define IB_FRAME_TYPE_TX                  0x02
+#define IB_FRAME_TYPE_ERROR               0x03
 
-#define IB_GLOBAL_DBG_DEFAULT          (0x00)
+#define IB_GLOBAL_DBG_DEFAULT           (0x00)
 
-#define MB_DEV_ID_NU                    0x0F  //для отправки отладочной информации
+#define MB_DEV_ID_NU                      0x0F  //для отправки отладочной информации
 
-#define MB_F_CODE_IDLE									0x00
-#define MB_F_CODE_3											0x03
-#define MB_F_CODE_6											0x06
-#define MB_F_CODE_16										0x10
-#define MB_F_CODE_106										0x6A  // не в стандарте ModBus
-#define MB_F_CODE_111										0x6F  // не в стандарте ModBus
-#define MB_F_CODE_ERROR									0x80
+#define MB_F_CODE_IDLE									  0x00
+#define MB_F_CODE_3											  0x03
+#define MB_F_CODE_6											  0x06
+#define MB_F_CODE_16										  0x10
+#define MB_F_CODE_106										  0x6A  // не в стандарте ModBus
+#define MB_F_CODE_111										  0x6F  // не в стандарте ModBus
+#define MB_F_CODE_ERROR									  0x80
 
-#define MB_FRAME_TYPE_RX      0x01
-#define MB_FRAME_TYPE_TX      0x02
-#define MB_FRAME_TYPE_ERROR   0x03
+#define MB_FRAME_TYPE_RX                  0x01
+#define MB_FRAME_TYPE_TX                  0x02
+#define MB_FRAME_TYPE_ERROR               0x03
 
-#define MB_CRC16_INIT_VAL     0xFFFF
+#define MB_CRC16_INIT_VAL                 0xFFFF
 
 #define MB_UART_RX_STATUS_OK							1
 #define MB_UART_RX_STATUS_EXCEPTION				0
@@ -44,12 +44,12 @@
 #define MB_UART_CRC_ERROR									-2
 #define MB_UART_UNEXPECTED_FRAME					-3
 
-#define MB_TRANSACTION_WRITE_BROAD	0x03
-#define MB_TRANSACTION_WRITE				0x02
-#define MB_TRANSACTION_READ					0x01
-#define MB_TRANSACTION_IDLE 				0x00
+#define MB_TRANSACTION_WRITE_BROAD	      0x03
+#define MB_TRANSACTION_WRITE				      0x02
+#define MB_TRANSACTION_READ					      0x01
+#define MB_TRANSACTION_IDLE 				      0x00
 
-#define MB_BUFFER_SIZE              512
+#define MB_BUFFER_SIZE                    128
 
 
 #pragma pack(push, 2)
@@ -109,6 +109,7 @@ typedef struct
   uint8_t global_dbg_flag;
   //
   uint64_t last_call_time_us;
+  uint64_t call_interval_us;
 } typeIBStruct;
 
 #pragma pack(pop)

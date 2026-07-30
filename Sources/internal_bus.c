@@ -38,9 +38,11 @@ int8_t ib_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceSt
 {
 	typeIBStruct* ib_ptr = (typeIBStruct*)ctrl_struct;
 	if ((time_us - ib_ptr->last_call_time_us) > (IB_PROCESS_PERIOD*1000)) {
+		ib_ptr->call_interval_us = time_us - ib_ptr->last_call_time_us;
 		ib_ptr->last_call_time_us = time_us;
 		//! транзакция, которая ожидает команд по ВШ для управления ЦМ из вне (например из КПА)
 		ib_run_transaction(ib_ptr, MB_DEV_ID_NU, MB_F_CODE_IDLE, NULL, NULL, NULL);
+		//
 		return 1;
 	}
 	else {
@@ -69,8 +71,8 @@ void ib_reset_parameters(typeIBStruct* ib_ptr)
 	//
 	ib_ptr->command_frame_flag = 0;
 	//
-	memset(ib_ptr->tx_data, 0x00, MB_BUFFER_SIZE);
-	memset(ib_ptr->rx_data, 0x00, MB_BUFFER_SIZE);
+	memset(ib_ptr->tx_data, 0x00, sizeof(ib_ptr->tx_data));
+	memset(ib_ptr->rx_data, 0x00, sizeof(ib_ptr->rx_data));
 	ib_ptr->tx_len = 0;
 	ib_ptr->rx_len = 0;
 	//
@@ -152,10 +154,8 @@ int8_t ib_run_transaction(typeIBStruct* ib_ptr, uint8_t dev_id, uint8_t f_code, 
 		return 1;
 	}
 	memset(ib_ptr->rx_data, 0x00, sizeof(ib_ptr->rx_data));
+	ib_ptr->rx_len = 0;
 	if (ib_ptr->uart.get_packet(ib_ptr->uart_inst, ib_ptr->rx_data, (uint16_t*)&ib_ptr->rx_len)) {
-		if (ib_ptr->rx_len >= 128){
-			ib_ptr->error_counter += 1;
-		}
 		//
 		memset((uint8_t*)&ib_ptr->rx_frame, 0x00, sizeof(typeModBusFrameStruct));
 		//
@@ -163,8 +163,10 @@ int8_t ib_run_transaction(typeIBStruct* ib_ptr, uint8_t dev_id, uint8_t f_code, 
 			case(MB_UART_RX_STATUS_OK):
 				return 1;
 			case(MB_UART_RX_STATUS_LENGTH):
-				ib_ptr->nans_status |= (1<<dev_id);
-				ib_ptr->nans_counter += 1;
+				if (dev_id != MB_DEV_ID_NU){
+					ib_ptr->nans_status |= (1<<dev_id);
+					ib_ptr->nans_counter += 1;
+				}
 				//
 				//for (i = 0; i < ib_ptr->rx_len; i++){
 					// printf("%02X", ib_ptr->rx_data[i]);
@@ -366,9 +368,11 @@ void mb_frame_form_packet(typeModBusFrameStruct* frame_ptr, uint8_t* data, uint1
 				break;
 			case 111:
 			case 106:
-				data[2] = (frame_ptr->data[0] >> 8) & 0xFF;
-				data[3] = (frame_ptr->data[1] >> 0) & 0xFF;
-				l = 4;
+				data[2] = (frame_ptr->reg_addr >> 8) & 0xFF;
+				data[3] = (frame_ptr->reg_addr >> 0) & 0xFF;
+				data[4] = (frame_ptr->data[0] >> 8) & 0xFF;
+				data[5] = (frame_ptr->data[0] >> 0) & 0xFF;
+				l = 6;
 				break;
 		}
 	}
