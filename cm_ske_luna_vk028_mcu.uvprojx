@@ -49,7 +49,7 @@
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
           <OutputDirectory>.\Objs\</OutputDirectory>
-          <OutputName>cm_ske_arct_vk028_mcu</OutputName>
+          <OutputName>cm_ske_luna_vk028_mcu</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
           <CreateHexFile>1</CreateHexFile>
