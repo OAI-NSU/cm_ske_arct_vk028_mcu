@@ -20,8 +20,8 @@
  * @param cm_ptr указатель на управляющую структуру cm
  * @param self_num собственный номер в терминах device_list
  * @param id номер слэйва на ВШ (для технологических команд)
- * @param mko_rt_ptr структура управления ОУ МКО
  * @param mko_bc_ptr структура управления КШ МКО
+ * @param pcu_ptr,
  * @param ib_ptr 
  * @param pwr_ptr структура управления питанием
  * @param hs_io_ptr 
@@ -35,6 +35,7 @@ void cm_init(
 				uint8_t self_num, 
 				uint8_t id, 
 				typeMKOBCStruct *mko_bc_ptr,
+				type_GPIO_PCU *pcu_ptr,
 				typeIBStruct *ib_ptr, 
 				typePower *pwr_ptr,
 				type_SINGLE_GPIO *hs_io_ptr,
@@ -50,6 +51,7 @@ void cm_init(
 	printf("\t%s: frame mem init\n", now());
 	//
 	cm_ptr->mko_bc_ptr = mko_bc_ptr;
+	cm_ptr->pcu_ptr = pcu_ptr;
 	cm_ptr->ib_ptr = ib_ptr;
 	cm_ptr->hs_io_ptr = hs_io_ptr;
 	cm_ptr->stm_ptr = stm_ptr;
@@ -337,8 +339,8 @@ int8_t cm_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceSt
 	}
 	// обработка собранных кадров
 	cm_frame_handling(cm_ptr);
-	// обработка командных сообщений МКО
-	cm_mko_command_interface_handler(cm_ptr);
+	// обработка командных сообщений ПКУ
+	cm_pcu_command_interface_handler(cm_ptr);
 	// обработка отладочных сообщений по ВШ
 	cm_dbg_ib_command_handler(cm_ptr);
 	return retval;
@@ -385,6 +387,9 @@ void cm_frame_handling(typeCMModel* cm_ptr)
 				//TODO: работаем через МЦИ // mko_rt_write_to_subaddr(cm_ptr->mko_rt_ptr, frame_get_type_from_definer(frame), (uint16_t*)&frame);
 				// archive memory
 				fr_mem_write_data_frame(&cm_ptr->mem, (uint8_t*)&frame);
+				//
+				//TODO: временно отправляем все кадры в ВШ
+				//ib_run_transaction(cm_ptr->ib_ptr, MB_DEV_ID_NU, MB_F_CODE_16, 0, 32, (uint16_t*)&frame);
 			break;
 		}
 	}
@@ -556,27 +561,17 @@ __weak void cm_dbg_ib_command_handler(typeCMModel* cm_ptr)
 	//
 }
 
-// Работа с командным интерфейсом МКО
+// Работа с командным интерфейсом ПКУ
 
 /**
-  * @brief  проверка наличие команды в командном интерфейсе МКО
+  * @brief  проверка наличие команды в командном интерфейсе ПКУ
 	* @param  cm_ptr указатель на структуру управления ЦМ
   */
-__weak void cm_mko_command_interface_handler(typeCMModel *cm_ptr)
+__weak void cm_pcu_command_interface_handler(typeCMModel *cm_ptr)
 {
 	//
 }
 
-/**
-  * @brief  обработчик команды синхронизации времени
-	* @param  cm_ptr указатель на структуру управления
-  */
-void cm_mko_cmd_synch_time(typeCMModel* cm_ptr, uint16_t h_time, uint16_t l_time)
-{
-	cm_ptr->ctrl.sync_num += 1;
-	cm_ptr->ctrl.sync_time_s = clock_get_time_s();
-	clock_set_time_s_with_diff((uint64_t)(((uint64_t)(h_time & 0xFFFF) << 16) | ((uint64_t)(l_time & 0xFFFF) << 0)), &cm_ptr->ctrl.diff_time);
-}
 /**
   * @brief  включение режима констант для проверки работы отправки данных
 	* @param  cm_ptr указатель на структуру управления

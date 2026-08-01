@@ -13,6 +13,7 @@
 #include "mko_bc.h"
 #include "stm.h"
 #include "mpp_conf.h"
+#include "pcu.h"
 
 #define CM_HANDLER_INTERVAL_MS   500
 
@@ -39,7 +40,7 @@ enum cm_interval_list
 	CM_1S_INTERVAL,
 	CM_INTERV_NUMBER
 };
-#define DEFAULT_CM_INTERV_VALUES_S					{10, 	120, 	1, 		10, 	1}
+#define DEFAULT_CM_INTERV_VALUES_S					{10, 	120, 	2, 		10, 	1}
 #define DEFAULT_CM_DEFAULT_START_TIME_S				{10, 	10,		0, 		11, 	11}
 
 #define CM_EVENT_MEAS_INTERVAL_START       			(1<<0)
@@ -109,24 +110,12 @@ enum cm_interval_list
 /**
  * @brief  список команд МКО
  */
-enum mko_cmd_list
+enum pcu_cmd_list
 {
-	CMD_TEST = 1, CMD_INIT, CMD_SET_INTERVAL, CMD_SET_READ_PTR,
-	CMD_SET_WIN_BOUND, CMD_SET_MPP_OFFSET, CMD_RD_PTR_TO_DEF_AREA, CMD_CONST_MODE,
-	CMD_CURRENT_LVL, CMD_PWR_CH_CTRL, CMD_SPEEDY_MODE, CMD_MPI_OFF,
+	CMD_TEST = 1,
 	CMD_NUMBER
 };
 
-/**
- * @brief  список команд технологического подадреса МКО
- */
-enum mko_tech_cmd_list
-{
-	TCMD_CM_PARAM = 1, TCMD_CHECK_MIRROR, TCMD_SET_INTERVAL, TCMD_CHECK_MEM,
-	TCMD_RD_ANY_FRAME, TCMD_SET_IB, TCMD_MPP_CTRL, TCMD_SET_STM,
-	TCMD_SET_DEP_CTRL_PARAM, TCMD_SET_OPERATION_TIME, TCMD_WD_MCU_RESET, TCMD_WD_MPP_MEM_INIT,
-	TCMD_NUMBER
-};
 
 /**
  * @brief  список отладочных команд через ВШ
@@ -261,6 +250,7 @@ typedef struct
 	uint16_t device_number, frame_type; //! параметры прибора, в котором он используется
 	//
 	typeMKOBCStruct* mko_bc_ptr;
+	type_GPIO_PCU* pcu_ptr;
 	typeIBStruct *ib_ptr;
 	typePower *pwr_ptr;
 	typeFRAME_MEM mem;
@@ -293,6 +283,7 @@ void cm_init(
 				uint8_t self_num, 
 				uint8_t id, 
 				typeMKOBCStruct *mko_bc_ptr,
+				type_GPIO_PCU *pcu_ptr,
 				typeIBStruct *ib_ptr, 
 				typePower *pwr_ptr,
 				type_SINGLE_GPIO *hs_io_ptr,
@@ -319,9 +310,8 @@ void cm_set_speedy_mode(typeCMModel* cm_ptr, uint16_t speedy_mask, uint16_t time
 void cm_frame_forming(typeCMModel* cm_ptr);
 // Отладка через ВШ
 __weak void cm_dbg_ib_command_handler(typeCMModel* cm_ptr);
-// обработка командных сообщений МКО
-__weak void cm_mko_command_interface_handler(typeCMModel *cm_ptr);
-void cm_mko_cmd_synch_time(typeCMModel* cm_ptr, uint16_t h_time, uint16_t l_time);
+// обработка командных сообщений ПКУ
+__weak void cm_pcu_command_interface_handler(typeCMModel *cm_ptr);
 void cm_constant_mode_ena(typeCMModel* cm_ptr, uint8_t mode);
 uint8_t cm_set_clear_status(typeCMModel* cm_ptr, uint8_t status, uint8_t set_clear);
 // Внутренние рабочие функции

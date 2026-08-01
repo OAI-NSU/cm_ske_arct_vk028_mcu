@@ -49,7 +49,7 @@
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
           <OutputDirectory>.\Objs\</OutputDirectory>
-          <OutputName>cm_ske_luna_vk028_mcu</OutputName>
+          <OutputName>cm_ske_arct_vk028_mcu</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
           <CreateHexFile>1</CreateHexFile>
@@ -581,6 +581,11 @@
               <FileName>gen_mpp.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Sources\gen_mpp.c</FilePath>
+            </File>
+            <File>
+              <FileName>pcu.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Sources\pcu.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1296,6 +1301,11 @@
               <FileName>gen_mpp.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Sources\gen_mpp.c</FilePath>
+            </File>
+            <File>
+              <FileName>pcu.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Sources\pcu.c</FilePath>
             </File>
           </Files>
         </Group>

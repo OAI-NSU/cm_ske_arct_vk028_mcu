@@ -18,11 +18,12 @@
 #include "mpp_conf.h"
 #include "mpp.h"
 #include "gen_mpp.h"
+#include "pcu.h"
 
 //***Общие настройки***//
 
 //версия прошивки
-#define CM_SW_VERSION 			  "0.03"
+#define CM_SW_VERSION 			  "0.04"
 // номер устройства
 #define FRAME_DEV_ID 			    231 // (230 - отработочный как в СКЭ-Луна)
 
@@ -33,6 +34,7 @@ type_GPIO_OAI_cm gpio;
 typeADCStruct adc;
 typeTPStruct tp;
 typeCMModel cm; 
+type_GPIO_PCU pcu;
 typePower pwr;
 typeIBStruct ib;
 type_STM_Model stm;
@@ -141,6 +143,8 @@ void __main_process_registration_box(void)
 	tp_process_registration(&tp, &adc_process_tp, &adc, 0, 0);
 	tp_process_registration(&tp, &pwr_process_tp, &pwr, 0, 0);
   tp_process_registration(&tp, &stm_process_tp, &stm, 0, 0);
+  tp_process_registration(&tp, &pcu_process_tp, &pcu, 0, 0);
+
 	// Процессы периферийных устройств
 	for (uint8_t uint8_var = 0; uint8_var < MPP_DEV_NUM; uint8_var++){
 		tp_process_registration(&tp, &mpp_process_tp, &mpp[uint8_var], 128*(MPP1+uint8_var), 128);
@@ -188,6 +192,8 @@ void __main_base_init(void)
   printf("%s: adc init\n", now());
   pwr_init(&pwr, &adc, &gpio); 
   printf("%s: pwr init\n", now());
+  pcu_init(&pcu);
+  printf("%s: pcu init\n", now());
   //
   //TODO: добавить инициализацию МПИ
   //
@@ -195,6 +201,7 @@ void __main_base_init(void)
             CM,
             CM_SELF_MB_ID,
             &mko_bc,
+						&pcu,
             &ib,
             &pwr,
             &gpio.io[14],
@@ -213,6 +220,45 @@ void __main_base_init(void)
 	clock_set_time_s(0);
 	// регистрация процессов
 	__main_process_registration_box();
+}
+
+void cm_pcu_command_interface_handler(typeCMModel *cm_ptr)
+{
+  uint16_t cmd_num = 0;
+  uint32_t default_intervals[CM_INTERV_NUMBER] = DEFAULT_CM_INTERV_VALUES_S;
+  uint32_t intervals_60[CM_INTERV_NUMBER] = {10, 	60, 	2, 		10, 	1};
+  uint32_t dbg_intervals[CM_INTERV_NUMBER] = {5, 	10, 	2, 		10, 	1};
+  //
+  cmd_num = pcu_cmd_extraction(cm_ptr->pcu_ptr);
+  if (cmd_num){
+    switch (cmd_num){
+      case 0x0101:
+        printf("%s: pcu cmd <0x%04X> \n", now(), cmd_num);
+        break;
+			case 0x0201:
+				cm_set_speedy_mode(cm_ptr, 0xFFFF, 0);
+        for (uint8_t i_num = 0; i_num < CM_INTERV_NUMBER; i_num++) {cm_set_interval_value(cm_ptr, i_num, default_intervals[i_num]);}
+        printf("%s: pcu cmd <0x%04X> - default intervals \n", now(), cmd_num);
+        break;
+			case 0x0202:
+				cm_set_speedy_mode(cm_ptr, 0xFFFF, 0);
+        for (uint8_t i_num = 0; i_num < CM_INTERV_NUMBER; i_num++) {cm_set_interval_value(cm_ptr, i_num, intervals_60[i_num]);}
+        printf("%s: pcu cmd <0x%04X> - meas interval to 60s \n", now(), cmd_num);
+        break;
+			case 0x0203:
+				cm_set_speedy_mode(cm_ptr, 0xFFFF, 0);
+        for (uint8_t i_num = 0; i_num < CM_INTERV_NUMBER; i_num++) {cm_set_interval_value(cm_ptr, i_num, dbg_intervals[i_num]);}
+        printf("%s: pcu cmd <0x%04X> - dbg intervals \n", now(), cmd_num);
+        break;
+			case 0x0204:
+        cm_set_speedy_mode(cm_ptr, 0xFFFF, 3600);
+        printf("%s: pcu cmd <0x%04X> - speedy mode \n", now(), cmd_num);
+        break;
+      default:
+        printf("%s: unknown pcu cmd \n", now());
+        break;
+    }
+  }
 }
 
 /**
@@ -271,6 +317,12 @@ void INT_PORT_CallBack(GPIO_TypeDef *port, uint8_t line)
   irq_source_num = oai_cm_io_find(&gpio, port, line);
   // Важно, в данном блок происходит связь команды управления и выходов (пример: OUT_CMD_1 <-> KU_CMD_WATCH_MODE_ON)
   switch(irq_source_num){
+    case OUT_CMD_1:
+      pcu_set_event(&pcu, PCU_EVENT_IRQ);
+      break;
+    case OUT_CMD_2:
+      pcu_set_event(&pcu, PCU_EVENT_IRQ);
+      break;
     default:
       // обработка прерывания от GPIO
     break;
