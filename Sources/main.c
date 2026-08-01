@@ -23,7 +23,7 @@
 //***Общие настройки***//
 
 //версия прошивки
-#define CM_SW_VERSION 			  "0.04"
+#define CM_SW_VERSION 			  "0.05"
 // номер устройства
 #define FRAME_DEV_ID 			    231 // (230 - отработочный как в СКЭ-Луна)
 
@@ -42,7 +42,7 @@ typeMKOBCStruct mko_bc;
 //
 typeMPPStruct mpp[MPP_DEV_NUM];   //! программная модель периферийных модулей МПП
 typeGEN_MPP_Struct gmpp;          
-typeDEPStruct dep[6];
+typeDEPStruct dep[8];
 // typeMKKDStruct mkkd;
 //
 void SystemCoreClockUpdate(void);
@@ -150,7 +150,7 @@ void __main_process_registration_box(void)
 		tp_process_registration(&tp, &mpp_process_tp, &mpp[uint8_var], 128*(MPP1+uint8_var), 128);
 	}
 
-  for (uint8_t uint8_var = 0; uint8_var < MPP_DEV_NUM; uint8_var++){
+  for (uint8_t uint8_var = 0; uint8_var < 8; uint8_var++){
 		tp_process_registration(&tp, &dep_process_tp, &dep[uint8_var], 128*(DEP_AD1+uint8_var), 128);
 	}
   // tp_process_registration(&tp, &gmpp_process_tp, &gmpp, 128*GMPP, 128);

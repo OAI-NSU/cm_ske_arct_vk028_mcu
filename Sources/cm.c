@@ -389,7 +389,7 @@ void cm_frame_handling(typeCMModel* cm_ptr)
 				fr_mem_write_data_frame(&cm_ptr->mem, (uint8_t*)&frame);
 				//
 				//TODO: временно отправляем все кадры в ВШ
-				//ib_run_transaction(cm_ptr->ib_ptr, MB_DEV_ID_NU, MB_F_CODE_16, 0, 32, (uint16_t*)&frame);
+				ib_run_transaction(cm_ptr->ib_ptr, MB_DEV_ID_NU, MB_F_CODE_16, 0, 32, (uint16_t*)&frame);
 			break;
 		}
 	}

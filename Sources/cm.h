@@ -24,7 +24,8 @@
 typedef enum devices_list
 {
 	CM, 		MPP1, 		MPP2, 		MPP3,
-	MPP4, 		DEP_AD1, 	DEP_AD2, 	DEP_AD3,
+	MPP4, 		MPP5, 		MPP6, 		MPP7,
+	MPP8, 		DEP_AD1, 	DEP_AD2, 	DEP_AD3,
 	DEP_AD4, 	DEP_AD5, 	DEP_AD6, 	DEP_AD7,
 	DEP_AD8, 	MKKD, 		GMPP, 
 	DEV_NUM
