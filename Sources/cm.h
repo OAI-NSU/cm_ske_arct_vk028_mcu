@@ -32,8 +32,8 @@ typedef enum devices_list
 } device_list;
 
 //! Управление разрешением работы ускоренного режима для различных устройств
-#define CM_DEVICE_MEAS_MODE_MASK 	0x017FE //! модули, работающие по измерительному интервалу
-#define CM_DEVICE_SPEEDY_MODE_MASK 	0x017FE //! Ускоренный режим разрешен для всего, кроме ДИР (МККД) и ЦМ
+#define CM_DEVICE_MEAS_MODE_MASK 		0x05FFFE //! модули, работающие по измерительному интервалу
+#define CM_DEVICE_SPEEDY_MODE_MASK 		0x05FFFE //! Ускоренный режим разрешен для всего, кроме ДИР (МККД) и ЦМ
 
 enum cm_interval_list
 {
@@ -42,7 +42,7 @@ enum cm_interval_list
 	CM_INTERV_NUMBER
 };
 #define DEFAULT_CM_INTERV_VALUES_S					{10, 	120, 	2, 		10, 	1}
-#define DEFAULT_CM_DEFAULT_START_TIME_S				{10, 	10,		0, 		11, 	11}
+#define DEFAULT_CM_DEFAULT_START_TIME_S				{15, 	15,		16, 	16, 	16}
 
 #define CM_EVENT_MEAS_INTERVAL_START       			(1<<0)
 #define CM_EVENT_MEAS_INTERVAL_DATA_READY  			(1<<1)
@@ -216,8 +216,8 @@ typedef union{
   */
 typedef  struct
 {
-	uint16_t speedy_mode_state;
-	uint16_t speedy_mode_mask;
+	uint32_t speedy_mode_state;
+	uint32_t speedy_mode_mask;
 	uint64_t speedy_mode_timeout;
 	//
 	uint64_t intervals_us[CM_INTERV_NUMBER];

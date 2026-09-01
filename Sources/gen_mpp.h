@@ -126,14 +126,4 @@ void gmpp_fifo_init(typeGEN_MPP_Struct* gmpp_ptr);
 int8_t gmpp_write_fifo(typeGEN_MPP_Struct* gmpp_ptr, typeFrameStruct* frame);
 int8_t gmpp_read_fifo(typeGEN_MPP_Struct* gmpp_ptr, typeFrameStruct* frame);
 //
-// функции для работы циклограмы измерительного интервала
-void mpp_meas_cycl_init(typeMPPStruct* mpp_ptr);
-int32_t mpp_meas_cycl_on(void* ctrl_struct, uint8_t* data);
-int32_t mpp_meas_cycl_arch_offset_get(void* ctrl_struct, uint8_t* data);
-int32_t mpp_meas_cycl_struct_request(void* ctrl_struct, uint8_t* data);
-int32_t mpp_meas_cycl_struct_get(void* ctrl_struct, uint8_t* data);
-int32_t mpp_meas_cycl_forced_start(void* ctrl_struct, uint8_t* data);
-//
-void __mpp_struct_rev(typeMPPRec* mpp_struct_ptr);
-//
 #endif

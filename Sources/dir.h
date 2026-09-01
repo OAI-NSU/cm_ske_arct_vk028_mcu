@@ -16,8 +16,8 @@
 #define DIR_EVENT_MEAS_INTERVAL_START       (1<<0)
 #define DIR_EVENT_MEAS_INTERVAL_DATA_READY  (1<<1)
 
-#define DIR_DEVICE_NUM    (5)
-#define DIR_MEAS_NUM      (2)
+#define DIR_DEVICE_NUM    (9)
+#define DIR_MEAS_NUM      (1)
 
 #define DIR_REC_FIFO_DEPTH (DIR_MEAS_NUM*2)
 

@@ -126,7 +126,7 @@ void gmpp_matrix_process_data(typeGEN_MPP_Struct* gmpp_ptr)
 	gmpp_ptr->mpp_cur_mtrx_str.time = clock_get_time_s();
 	for(uint8_t mpp_num=0; mpp_num<MPP_DEV_NUM; mpp_num++){
 		if (gmpp_ptr->mpp[mpp_num]->matrix_raw.amplitude != 0xFEFE){
-			gmpp_ptr->mpp_cur_mtrx_str.amplitude[mpp_num] = gmpp_ptr->mpp[mpp_num]->matrix_raw.amplitude;
+			gmpp_ptr->mpp_cur_mtrx_str.amplitude[mpp_num] = (gmpp_ptr->mpp[mpp_num]->matrix_raw.amplitude >> 4) & 0xFF;
 		}
 		else {
 			gmpp_ptr->mpp_cur_mtrx_str.amplitude[mpp_num] = 0;

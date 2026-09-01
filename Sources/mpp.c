@@ -12,16 +12,19 @@
 #include "mpp.h"
 
 /**
-  * @brief  инициализация структуры управления
-	* @param  mpp_ptr указатель на структуру управления
-	* @param  id номер устройства на внутренней шине
-	* @param  device_number номер устройства в котором работает МПП
-	* @param  frame_type тип кадра для МПП
-	* @param  channel номер используемого канала МПП
-	* @param  offset значение уставки определение помехи в кв АЦП
-	* @param  ib_ptr указатель на внутреннюю шину
-	* @param  gl_fr_num указатель на сквозной глобальный номер кадра
-  */
+ * @brief 
+ * 
+ * @param mpp_ptr указатель на структуру управления
+ * @param self_num собственный номер периферии
+ * @param id номер устройства на внутренней шине
+ * @param device_number номер устройства в котором работает МПП
+ * @param frame_type тип кадра
+ * @param channel канал работы МПП
+ * @param offset смещение внутри канала МПП
+ * @param ib_ptr внутрення шина
+ * @param gl_fr_num указатель на сквозной глобальный номер кадра
+ * @param mpp_type тип МПП: МПП или РП
+ */
 void mpp_init(typeMPPStruct* mpp_ptr, uint8_t self_num, uint8_t id, uint16_t device_number, uint16_t frame_type, uint8_t channel, uint32_t offset, typeIBStruct* ib_ptr, uint32_t* gl_fr_num, uint8_t mpp_type)
 {
 	mpp_reset_parameters(mpp_ptr);
@@ -33,13 +36,14 @@ void mpp_init(typeMPPStruct* mpp_ptr, uint8_t self_num, uint8_t id, uint16_t dev
 	mpp_ptr->ib = ib_ptr;
 	mpp_ptr->self_num = self_num;
 	mpp_ptr->global_frame_num_ptr = gl_fr_num;
-	// учтановка параметров по умолчанию
+	// установка параметров по умолчанию
 	mpp_ptr->offset_to_set = offset;
 	mpp_ptr->bound_to_set[0] = MPP_WIN_BND_DEFAULT_1;
 	mpp_ptr->bound_to_set[1] = MPP_WIN_BND_DEFAULT_2;
 	mpp_ptr->bound_to_set[2] = MPP_WIN_BND_DEFAULT_3;
 	// работы с циклограммами  МПП
 	mpp_meas_cycl_init(mpp_ptr);
+	mpp_arch_frame_cycl_init(mpp_ptr);
 }
 
 /**
@@ -55,8 +59,14 @@ void mpp_reset_parameters(typeMPPStruct* mpp_ptr)
 	memset((uint8_t*)&mpp_ptr->rp_frame, 0xFE, sizeof(mpp_ptr->frame));
 	memset((uint8_t*)&mpp_ptr->mko_rp_frame, 0xFE, sizeof(mpp_ptr->frame));
 	memset((uint8_t*)&mpp_ptr->rp_raw_body, 0x0, sizeof(mpp_ptr->rp_raw_body));
+	memset((uint8_t*)&mpp_ptr->last_rec_full, 0x0, sizeof(mpp_ptr->last_rec_full));
+	memset((uint8_t*)&mpp_ptr->last_rec_full_parsed, 0x0, sizeof(mpp_ptr->last_rec_full_parsed));
+	//
+	memset((uint8_t*)&mpp_ptr->matrix_raw, 0x0, sizeof(mpp_ptr->matrix_raw));
+	memset((uint8_t*)&mpp_ptr->win_raw, 0x0, sizeof(mpp_ptr->win_raw));
 	//
 	mpp_ptr->frame_data_ready = 0x00;
+	mpp_ptr->arch_frame_data_ready = 0x00;
 	mpp_ptr->rec_ptr = 0;
 	//
 	mpp_ptr->offset_to_set = 0; 
@@ -72,9 +82,12 @@ void mpp_reset_parameters(typeMPPStruct* mpp_ptr)
 	mpp_ptr->meas_event_num = 0;
 	mpp_ptr->start_collect_data_time = 0;
 	mpp_ptr->arch_init_flag = 0;
-	mpp_ptr->mpp_max_survey_ena = 0;
+	//
+	mpp_ptr->last_rec_cnt = 0;
 	//
 	mpp_set_calibr(mpp_ptr, 1.0, 0.0);
+	//
+	mpp_ptr->mpp_max_survey_ena = 0;
 }
 
 /**
@@ -111,6 +124,7 @@ int8_t mpp_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceS
 	}
 	//обработка циклограммы
 	cyclo_handler(&mpp_ptr->meas_cyclo, time_us/1000);
+	cyclo_handler(&mpp_ptr->arch_cyclo, time_us/1000);
 	//обработка передачи данных
 	if((mpp_ptr->frame_data_ready) && (mpp_ptr->mpp_type == MPP_TYPE_MPP))
 	{
@@ -123,6 +137,11 @@ int8_t mpp_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceS
 		mpp_ptr->rp_frame_data_ready = 0;
 		memcpy(interface->shared_mem, (uint8_t*)&mpp_ptr->mko_rp_frame, sizeof(typeFrameStruct));
 		interface->event[mpp_ptr->self_num] |= MPP_EVENT_MEAS_INTERVAL_DATA_READY;
+	}
+	else if((mpp_ptr->arch_frame_data_ready) && (mpp_ptr->mpp_type == MPP_TYPE_MPP)){
+		mpp_ptr->arch_frame_data_ready = 0;
+		memcpy(interface->shared_mem, (uint8_t*)&mpp_ptr->mko_frame, sizeof(typeFrameStruct));
+		interface->event[mpp_ptr->self_num] |= MPP_EVENT_ARCH_FRAME_DATA_READY;
 	}
 	return retval;
 }
@@ -149,21 +168,30 @@ void mpp_write_offset_to_set(typeMPPStruct* mpp_ptr, uint16_t offset_to_set)
 	* @param  struct_num указатель на кадр
 	* @retval  1 - кадр сформирован, 0 - недостаточно данных для кадра
   */
-int8_t mpp_frame_forming(typeMPPStruct* mpp_ptr)
+int8_t mpp_frame_forming(typeMPPStruct* mpp_ptr, uint8_t arch_frame)
 {
 	if(mpp_ptr->rec_ptr >= 2){
 		mpp_ptr->frame.raw.label = 0x0FF1;
 		mpp_ptr->frame.raw.definer = frame_definer(0, mpp_ptr->device_number, NULL, mpp_ptr->frame_type);
 		mpp_ptr->frame.raw.num = ((*mpp_ptr->global_frame_num_ptr)++)&0xFFFF;
 		mpp_ptr->frame.raw.time = (clock_get_time_s());
+
+		mpp_ptr->frame.mpp.offset = mpp_ptr->loaded_offset;
+
 		mpp_ptr->rec_ptr -= 1;
-		mpp_ptr->frame.mpp.rec[0] = mpp_ptr->rec_buff[mpp_ptr->rec_ptr];
+		mpp_ptr->frame.mpp.rec[0] = mpp_ptr->rec_buff[mpp_ptr->rec_ptr].rec;
 		mpp_ptr->rec_ptr -= 1;
-		mpp_ptr->frame.mpp.rec[1] = mpp_ptr->rec_buff[mpp_ptr->rec_ptr];
+		mpp_ptr->frame.mpp.rec[1] = mpp_ptr->rec_buff[mpp_ptr->rec_ptr].rec;
+
 		mpp_ptr->frame.raw.crc16 = frame_crc16((uint8_t*)&mpp_ptr->frame.raw, sizeof(typeFrameStruct) - 2);
 		//
 		mpp_mko_frame_forming(mpp_ptr);
-		mpp_ptr->frame_data_ready = 1;
+		if (arch_frame == 0) {
+			mpp_ptr->frame_data_ready = 1;
+		}
+		else if (arch_frame) {
+			mpp_ptr->arch_frame_data_ready = 1;
+		}
 		return 1;
 	}
 	else{
@@ -188,7 +216,7 @@ void mpp_mko_frame_forming(typeMPPStruct* mpp_ptr)
 	for(uint8_t rec_num = 0; rec_num<2; rec_num++){
 		mpp_ptr->mko_frame.mpp.rec[rec_num].AcqTime_s	= _rev_u32_by_u16(mpp_ptr->frame.mpp.rec[rec_num].AcqTime_s);
 		mpp_ptr->mko_frame.mpp.rec[rec_num].AcqTime_us	= _rev_u32_by_u16(mpp_ptr->frame.mpp.rec[rec_num].AcqTime_us);
-		mpp_ptr->mko_frame.mpp.rec[rec_num].WidhtTime	= (mpp_ptr->frame.mpp.rec[rec_num].WidhtTime);
+		mpp_ptr->mko_frame.mpp.rec[rec_num].WidhtTime	= _rev_u32_by_u16(mpp_ptr->frame.mpp.rec[rec_num].WidhtTime);
 		mpp_ptr->mko_frame.mpp.rec[rec_num].ZeroCount	= (mpp_ptr->frame.mpp.rec[rec_num].ZeroCount);
 		mpp_ptr->mko_frame.mpp.rec[rec_num].Peak		= (mpp_ptr->frame.mpp.rec[rec_num].Peak);
 		mpp_ptr->mko_frame.mpp.rec[rec_num].Power		= _rev_u32_by_u16(mpp_ptr->frame.mpp.rec[rec_num].Power);
@@ -208,7 +236,7 @@ void mpp_time_set(typeMPPStruct* mpp_ptr, uint32_t time_s)
 	uint16_t data[2];
 	data[0] = (time_s >> 16) & 0xFFFF;
 	data[1] = (time_s >> 0) & 0xFFFF; 
-	ib_run_transaction(mpp_ptr->ib, 0xFF, 111, 0, 2, data);
+	ib_run_transaction(mpp_ptr->ib, MB_F_CODE_BROAD, 111, 0, 2, data);
 }
 
 /**
@@ -234,10 +262,9 @@ void mpp_constant_mode(typeMPPStruct* mpp_ptr, uint32_t on_off)
 {
 	uint16_t data[2];
 	if(mpp_ptr->mpp_type == MPP_TYPE_MPP){
-		mpp_ptr->const_mode = (on_off) ? 0x01 : 0x00;
-		data[0] = __REV16((mpp_ptr->channel << 8) | (255));
-		data[1] = __REV16(mpp_ptr->const_mode); 
-		ib_run_transaction(mpp_ptr->ib, mpp_ptr->id, 16, 0, 2, data);
+		mpp_ptr->const_mode = (on_off) ? 0xAAAA : 0x0000;
+		data[0] = __REV16(mpp_ptr->const_mode);
+		ib_run_transaction(mpp_ptr->ib, 0xFF, MB_F_CODE_106, 0x5555, 1, data);
 	}
 	else{
 		mpp_ptr->const_mode = (on_off) ? 0x01 : 0x00;
@@ -298,9 +325,9 @@ void mpp_arch_count_offset_get(typeMPPStruct* mpp_ptr)
 		data_offset = (mpp_ptr->channel == 0) ? 0 : 2;
 		ib_get_answer_data(mpp_ptr->ib, in_data, 8);
 		mpp_ptr->frame.mpp.arch_count = __REV16(*(uint16_t*)&in_data[0 + data_offset]);
-		mpp_ptr->frame.mpp.offset = __REV16(*(uint16_t*)&in_data[4 + data_offset]);
+		mpp_ptr->loaded_offset = __REV16(*(uint16_t*)&in_data[4 + data_offset]);
 		//
-		mpp_ptr->offs_float = mpp_ptr->frame.mpp.offset * mpp_ptr->k;
+		mpp_ptr->offs_float = mpp_ptr->loaded_offset * mpp_ptr->k;
 		mpp_ptr->arch_cnt = mpp_ptr->frame.mpp.arch_count;
 	}
 	else{
@@ -424,6 +451,7 @@ void mpp_rp_frame_forming(typeMPPStruct* mpp_ptr)
 	//
 	memcpy((uint8_t*)&mpp_ptr->rp_frame.rp.rp_body, (uint8_t*)&mpp_ptr->rp_raw_body, sizeof(typeRP_Body));
 	mpp_ptr->rp_frame.rp.changed_meas_interv = mpp_ptr->current_meas_interval;
+	mpp_ptr->rp_frame.rp.offset = mpp_ptr->loaded_offset;
 	//
 	mpp_ptr->rp_frame.raw.crc16 = frame_crc16((uint8_t*)&mpp_ptr->rp_frame.raw, sizeof(typeFrameStruct) - 2);
 	//
@@ -448,6 +476,7 @@ void mpp_rp_mko_frame_forming(typeMPPStruct* mpp_ptr)
 	//
 	memcpy((uint8_t*)&mpp_ptr->mko_rp_frame.rp.rp_body, (uint8_t*)&mpp_ptr->rp_frame.rp.rp_body, sizeof(typeRP_Body));
 	mpp_ptr->mko_rp_frame.rp.changed_meas_interv = mpp_ptr->rp_frame.rp.changed_meas_interv;
+	mpp_ptr->mko_rp_frame.rp.offset = mpp_ptr->rp_frame.rp.offset;
 	//
 	mpp_ptr->mko_rp_frame.raw.crc16 = frame_crc16((uint8_t*)&mpp_ptr->mko_rp_frame.raw, sizeof(typeFrameStruct) - 2);
 
@@ -464,7 +493,7 @@ void mpp_rp_mko_frame_forming(typeMPPStruct* mpp_ptr)
 void mpp_win_bounds_set(typeMPPStruct* mpp_ptr, uint16_t bound_1, uint16_t bound_2, uint16_t bound_3)
 {
 	uint16_t data[4];
-	data[0] = __REV16((mpp_ptr->channel << 8) + 0x10);
+	data[0] = __REV16((mpp_ptr->channel << 8) | 16);
 	data[1] = __REV16((bound_1 << 4) & 0xFFFF); 
 	data[2] = __REV16((bound_2 << 4) & 0xFFFF); 
 	data[3] = __REV16((bound_3 << 4) & 0xFFFF); 
@@ -487,6 +516,9 @@ void mpp_win_get(typeMPPStruct* mpp_ptr)
 		mpp_ptr->win_raw.bound[0] 	= __REV16(*(uint16_t*)&in_data[0]);
 		mpp_ptr->win_raw.bound[1] 	= __REV16(*(uint16_t*)&in_data[2]);
 		mpp_ptr->win_raw.bound[2] 	= __REV16(*(uint16_t*)&in_data[4]);
+		if(mpp_ptr->win_raw.bound[2] == 0) {
+			printf("error");
+		}
 		mpp_ptr->win_raw.num[0] 	= __REV16(*(uint16_t*)&in_data[12]);
 		mpp_ptr->win_raw.num[1] 	= __REV16(*(uint16_t*)&in_data[14]);
 		mpp_ptr->win_raw.num[2] 	= __REV16(*(uint16_t*)&in_data[16]);
@@ -505,7 +537,7 @@ void mpp_struct_request(typeMPPStruct* mpp_ptr)
 {
 	uint16_t data[2];
 	data[0] = __REV16((mpp_ptr->channel << 8) | (4));
-	data[1] = __REV16(0x0001);
+	data[1] = __REV16(0x0002);
 	ib_run_transaction(mpp_ptr->ib, mpp_ptr->id, 16, 0, 2, data);
 }
 
@@ -516,47 +548,54 @@ void mpp_struct_request(typeMPPStruct* mpp_ptr)
 void mpp_struct_get(typeMPPStruct* mpp_ptr)
 {
 	uint8_t i, in_data[64];
-	typeMPPRec rec[2];
+	typeMPPRec_full rec[2];
 	// todo: сделать запрос двух помех. Одна помеха из-за ошибки в модуле МПП, которая не дает читать две помехи за раз (подробности у А.А.Дорошкина)
-	if (ib_run_transaction(mpp_ptr->ib, mpp_ptr->id, 3, 7, 13, NULL) > 0){
-		ib_get_answer_data(mpp_ptr->ib, in_data, 26*1);
+	if (ib_run_transaction(mpp_ptr->ib, mpp_ptr->id, 3, 6, 26+1, NULL) > 0){
+		ib_get_answer_data(mpp_ptr->ib, in_data, 26*2+1*2);
 		// сохраняем полученные структуры в свои переменные, но отбрасываем номер канала
-		memcpy((uint8_t*)&rec[0], in_data+2, sizeof(typeMPPRec));
-		//memcpy((uint8_t*)&rec[1], in_data+2+24+2, sizeof(typeMPPRec));
+		memcpy((uint8_t*)&rec[0], in_data + 2, sizeof(typeMPPRec_full));
+		memcpy((uint8_t*)&rec[1], in_data + 2 + sizeof(typeMPPRec_full), sizeof(typeMPPRec_full));
+		mpp_ptr->last_rec_cnt = __REV16(*(uint16_t*)&in_data[0]);
 		// приводим порядок байт к используемому в МК
 		__mpp_struct_rev(&rec[0]);
-		//__mpp_struct_rev(&rec[1]);
+		__mpp_struct_rev(&rec[1]);
 		//
 		mpp_ptr->forced_start_flag = 1;
 		//
-		for (i=0; i<1; i++){
-			if((rec[i].AcqTime_s != 0) || (rec[i].AcqTime_us != 0)){ // проверяем есть ли измерение в прочитанных данных
+		for (i=0; i<MIN(mpp_ptr->last_rec_cnt, 2); i++){
+			if((rec[i].rec.AcqTime_s != 0) || (rec[i].rec.AcqTime_us != 0)){ // проверяем есть ли измерение в прочитанных данных
 				mpp_ptr->forced_start_flag = 0; // если кадры были получены, то принудительный запуск МПП не нужен
-				// заполняем буфер с помехами: если буфер переполнился пишем всегда в полседюю помеху пока буфер не будет вычитан
+				// заполняем буфер с помехами: если буфер переполнился пишем всегда в последнюю помеху пока буфер не будет вычитан
 				// предполагаем, что такая ситуация маловероятна
+				mpp_ptr->last_rec_full[i] = rec[i];
+				mpp_ptr->last_rec_full_parsed[i] = mpp_parc_rec(mpp_ptr, rec[i]);
+
 				mpp_ptr->rec_buff[mpp_ptr->rec_ptr] = rec[i];
-				mpp_ptr->rec_buff_parced[mpp_ptr->rec_ptr] = mpp_parc_rec(mpp_ptr, rec[i]);
+				mpp_ptr->rec_buff_parsed[mpp_ptr->rec_ptr] = mpp_parc_rec(mpp_ptr, rec[i]);
 				mpp_ptr->rec_ptr++;
+				
 				if (mpp_ptr->rec_ptr >= MPP_REC_FIFO_DEPTH) mpp_ptr->rec_ptr = MPP_REC_FIFO_DEPTH-1;
-				if (mpp_ptr->rec_ptr >= 2) {
-					mpp_frame_forming(mpp_ptr);
-				}
+			}
+			else{
+				memset((uint8_t*)&mpp_ptr->last_rec_full[i], 0x0, sizeof(mpp_ptr->last_rec_full[i]));
+				memset((uint8_t*)&mpp_ptr->last_rec_full_parsed[i], 0x0, sizeof(mpp_ptr->last_rec_full_parsed[i]));
 			}
 		}
 	}
 }
 
-typeMPPRecParc mpp_parc_rec(typeMPPStruct* mpp_ptr, typeMPPRec rec)
+typeMPPRecParc_full mpp_parc_rec(typeMPPStruct* mpp_ptr, typeMPPRec_full rec)
 {
-	typeMPPRecParc rec_parced;
-	rec_parced.AcqTime_s 	= rec.AcqTime_s;
-	rec_parced.AcqTime_us 	= rec.AcqTime_us/1000000.;
-	rec_parced.WidhtTime 	= rec.WidhtTime * 25E-9f;
-	rec_parced.ZeroCount 	= rec.ZeroCount;
-	rec_parced.Peak 		= rec.Peak * mpp_ptr->k;
-	rec_parced.Power 		= rec.Power * mpp_ptr->k * 25E-9f;
-	rec_parced.Mean 		= rec.Mean * mpp_ptr->k + mpp_ptr->b;
-	rec_parced.Noise 		= rec.Noise * mpp_ptr->k;
+	typeMPPRecParc_full rec_parced;
+	rec_parced.ch_id 			= rec.ch_id;
+	rec_parced.rec.AcqTime_s 	= rec.rec.AcqTime_s;
+	rec_parced.rec.AcqTime_us 	= rec.rec.AcqTime_us/1000000.;
+	rec_parced.rec.WidhtTime 	= rec.rec.WidhtTime * 25E-9f;
+	rec_parced.rec.ZeroCount 	= rec.rec.ZeroCount;
+	rec_parced.rec.Peak 		= rec.rec.Peak * mpp_ptr->k;
+	rec_parced.rec.Power 		= rec.rec.Power * mpp_ptr->k * 25E-9f;
+	rec_parced.rec.Mean 		= rec.rec.Mean * mpp_ptr->k + mpp_ptr->b;
+	rec_parced.rec.Noise 		= rec.rec.Noise * mpp_ptr->k;
 	return rec_parced;
 }
 
@@ -564,18 +603,19 @@ typeMPPRecParc mpp_parc_rec(typeMPPStruct* mpp_ptr, typeMPPRec rec)
   * @brief  перестановка байт в словах попарно в структуре МПП
 	* @param  mpp_struct_ptr указатель на структуру
   */
-void __mpp_struct_rev(typeMPPRec* mpp_struct_ptr)
+void __mpp_struct_rev(typeMPPRec_full* mpp_struct_ptr)
 {
-	typeMPPRec rec = *mpp_struct_ptr;
+	typeMPPRec_full rec = *mpp_struct_ptr;
 	//
-	rec.AcqTime_s 	= __REV(rec.AcqTime_s);
-	rec.AcqTime_us 	= __REV(rec.AcqTime_us);
-	rec.WidhtTime 	= __REV(rec.WidhtTime);
-	rec.ZeroCount 	= __REV16(rec.ZeroCount);
-	rec.Peak 		= __REV16(rec.Peak);
-	rec.Power 		= __REV(rec.Power);
-	rec.Mean 		= __REV16(rec.Mean);
-	rec.Noise 		= __REV16(rec.Noise);
+	rec.ch_id			= __REV16(rec.ch_id);
+	rec.rec.AcqTime_s 	= __REV(rec.rec.AcqTime_s);
+	rec.rec.AcqTime_us 	= __REV(rec.rec.AcqTime_us);
+	rec.rec.WidhtTime 	= __REV(rec.rec.WidhtTime);
+	rec.rec.ZeroCount 	= __REV16(rec.rec.ZeroCount);
+	rec.rec.Peak 		= __REV16(rec.rec.Peak);
+	rec.rec.Power 		= __REV(rec.rec.Power);
+	rec.rec.Mean 		= __REV16(rec.rec.Mean);
+	rec.rec.Noise 		= __REV16(rec.rec.Noise);
 	//
 	*mpp_struct_ptr = rec;
 }
@@ -591,18 +631,39 @@ void mpp_meas_cycl_init(typeMPPStruct* mpp_ptr)
 	// циклограмма инициализации МПП
 	cyclo_init(&mpp_ptr->meas_cyclo, "mpp");
 	// todo: продумать систему расшивки работы с каналами МПП. Возможно надо вернуться к идее работы с МПП в одном процессе для двух каналов
-	channel_delay = (mpp_ptr->channel == 0) ? 0 : MPP_CHANNEL_REQUEST_SHIFT_MS;  // костыль из-за того, что во время подготовки данных первого канала, второй канал не может запрашивать данные из архива
+	channel_delay = (mpp_ptr->channel == 1) ? 0 : MPP_CHANNEL_REQUEST_SHIFT_MS;  // костыль из-за того, что во время подготовки данных первого канала, второй канал не может запрашивать данные из архива
 	//
-	cyclo_add_step(&mpp_ptr->meas_cyclo, CYCLO_DO_NOTHING, (void*)mpp_ptr, 50, 0 + channel_delay, data);
-	cyclo_add_step(&mpp_ptr->meas_cyclo, mpp_meas_cycl_struct_request, (void*)mpp_ptr, 0, 150, data);
+	cyclo_add_step(&mpp_ptr->meas_cyclo, CYCLO_DO_NOTHING, (void*)mpp_ptr, 0, 0 + channel_delay, data);
+	cyclo_add_step(&mpp_ptr->meas_cyclo, mpp_meas_cycl_struct_request, (void*)mpp_ptr, 0, 300, data);
 	cyclo_add_step(&mpp_ptr->meas_cyclo, mpp_meas_cycl_struct_get, (void*)mpp_ptr, 0, 50, data);
+	data[0] = 0;
+	cyclo_add_step(&mpp_ptr->meas_cyclo, mpp_meas_cycl_frame_forming, (void*)mpp_ptr, 0, 0, data);
 	cyclo_add_step(&mpp_ptr->meas_cyclo, mpp_meas_cycl_win_val_get, (void*)mpp_ptr, 0, 50, data);
 	cyclo_add_step(&mpp_ptr->meas_cyclo, mpp_meas_cycl_forced_start, (void*)mpp_ptr, 0, 50, data);
 	cyclo_add_step(&mpp_ptr->meas_cyclo, mpp_meas_cycl_set_offset, (void*)mpp_ptr, 0, 50, data);
 	cyclo_add_step(&mpp_ptr->meas_cyclo, mpp_meas_cycl_set_win_bnd, (void*)mpp_ptr, 0, 50, data);
 	cyclo_add_step(&mpp_ptr->meas_cyclo, mpp_meas_cycl_rp_frame_forming, (void*)mpp_ptr, 0, 0, data);
-	cyclo_add_step(&mpp_ptr->meas_cyclo, mpp_meas_cycl_arch_offset_get, (void*)mpp_ptr, 50, 0, data);
-	cyclo_add_step(&mpp_ptr->meas_cyclo, mpp_meas_cycl_arch_init, (void*)mpp_ptr, 0, 0, data);
+	cyclo_add_step(&mpp_ptr->meas_cyclo, mpp_meas_cycl_arch_offset_get, (void*)mpp_ptr, 0, 50, data);
+	cyclo_add_step(&mpp_ptr->meas_cyclo, mpp_meas_cycl_arch_init, (void*)mpp_ptr, 0, 50, data);
+	cyclo_add_step(&mpp_ptr->meas_cyclo, mpp_meas_cycl_time_set, (void*)mpp_ptr, 0, 50, data);
+	
+}
+
+/**
+  * @brief  инициализация циклограмм чтения данных из архива МПП
+	* @param  mpp_ptr указатель на структуру управления
+  */
+void mpp_arch_frame_cycl_init(typeMPPStruct* mpp_ptr)
+{
+	uint8_t data[32] = {0};
+	// циклограмма инициализации МПП
+	cyclo_init(&mpp_ptr->arch_cyclo, "mpp_arch");
+	//
+	cyclo_add_step(&mpp_ptr->arch_cyclo, mpp_meas_cycl_arch_offset_get, (void*)mpp_ptr, 0, 0, data);
+	cyclo_add_step(&mpp_ptr->arch_cyclo, mpp_meas_cycl_struct_request, (void*)mpp_ptr, 0, 150, data);
+	cyclo_add_step(&mpp_ptr->arch_cyclo, mpp_meas_cycl_struct_get, (void*)mpp_ptr, 0, 0, data);
+	data[0] = 1;
+	cyclo_add_step(&mpp_ptr->arch_cyclo, mpp_meas_cycl_frame_forming, (void*)mpp_ptr, 0, 0, data);
 }
 
 /**
@@ -693,7 +754,29 @@ int32_t mpp_meas_cycl_set_offset(void* ctrl_struct, uint8_t* data)
 int32_t mpp_meas_cycl_set_win_bnd(void* ctrl_struct, uint8_t* data)
 {
 	typeMPPStruct* mpp_ptr = (typeMPPStruct*) ctrl_struct;
-	mpp_win_bounds_set(mpp_ptr, mpp_ptr->bound_to_set[0], mpp_ptr->bound_to_set[1], mpp_ptr->bound_to_set[2]);
+	if ((mpp_ptr->win_raw.bound[0] != (mpp_ptr->bound_to_set[0] << 4)) ||
+		(mpp_ptr->win_raw.bound[1] != (mpp_ptr->bound_to_set[1] << 4)) ||
+		(mpp_ptr->win_raw.bound[2] != (mpp_ptr->bound_to_set[2] << 4))){
+			mpp_win_bounds_set(mpp_ptr, mpp_ptr->bound_to_set[0], mpp_ptr->bound_to_set[1], mpp_ptr->bound_to_set[2]);
+		}
+	return 0;
+}
+
+/**
+  * @brief  обертка функция для согласования типов
+	* @param  ctrl_struct указатель на структуру управления
+  */
+int32_t mpp_meas_cycl_frame_forming(void* ctrl_struct, uint8_t* data)
+{
+	typeMPPStruct* mpp_ptr = (typeMPPStruct*) ctrl_struct;
+	if (mpp_ptr->mpp_type == MPP_TYPE_MPP){
+		if (data[0] == 0){
+			mpp_frame_forming(mpp_ptr, 0);
+		}
+		else{
+			mpp_frame_forming(mpp_ptr, 1);
+		}
+	}
 	return 0;
 }
 
@@ -724,3 +807,15 @@ int32_t mpp_meas_cycl_arch_init(void* ctrl_struct, uint8_t* data)
 	}
 	return 0;
 }
+
+/**
+  * @brief  обертка функция для согласования типов
+	* @param  ctrl_struct указатель на структуру управления
+  */
+int32_t mpp_meas_cycl_time_set(void* ctrl_struct, uint8_t* data)
+{
+	typeMPPStruct* mpp_ptr = (typeMPPStruct*) ctrl_struct;
+	mpp_time_set(mpp_ptr, clock_get_time_s());
+	return 0;
+}
+

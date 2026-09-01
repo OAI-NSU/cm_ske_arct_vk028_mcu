@@ -19,13 +19,14 @@
 #include "mpp.h"
 #include "gen_mpp.h"
 #include "pcu.h"
+// #include "dir.h"
 
 //***Общие настройки***//
 
 //версия прошивки
-#define CM_SW_VERSION 			  "0.05"
+#define CM_SW_VERSION 			  "0.06"
 // номер устройства
-#define FRAME_DEV_ID 			    231 // (230 - отработочный как в СКЭ-Луна)
+#define FRAME_DEV_ID 			    235 // 235 236 237 238 239
 
 //
 extern uint32_t SystemCoreClock;  /*100_000_000*/

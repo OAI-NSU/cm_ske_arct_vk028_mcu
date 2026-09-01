@@ -195,7 +195,9 @@ void dep_constant_mode(typeDEPStruct* dep_ptr, uint32_t on_off)
 		data[1] = 0x0001;
 		data[2] = 0x0000;
 		data[3] = 0x0000;
-		mko_bc_transaction_start_with_bus_find(dep_ptr->mko_bc_ptr, MKO_BC_MODE_WRITE, dep_ptr->id, 17, data, 4);
+		if (mko_bc_transaction_start_with_bus_find(dep_ptr->mko_bc_ptr, MKO_BC_MODE_WRITE, dep_ptr->id, 17, data, 4)){
+			//
+		}
 	}
 }
 
@@ -217,7 +219,9 @@ void dep_start(typeDEPStruct *dep_ptr, uint16_t meas_num)
 		data[1] = 0x0002;
 		data[2] = 0x0000;
 		data[3] = 0x0000;
-		mko_bc_transaction_start_with_bus_find(dep_ptr->mko_bc_ptr, MKO_BC_MODE_WRITE, dep_ptr->id, 17, data, 4);
+		if (mko_bc_transaction_start_with_bus_find(dep_ptr->mko_bc_ptr, MKO_BC_MODE_WRITE, dep_ptr->id, 17, data, 4)){
+			// 
+		}
 	}
 }
 
@@ -237,7 +241,9 @@ void dep_stop(typeDEPStruct *dep_ptr)
 		data[1] = 0x0000;
 		data[2] = 0x0000;
 		data[3] = 0x0000;
-		mko_bc_transaction_start_with_bus_find(dep_ptr->mko_bc_ptr, MKO_BC_MODE_WRITE, dep_ptr->id, 17, data, 4);
+		if (mko_bc_transaction_start_with_bus_find(dep_ptr->mko_bc_ptr, MKO_BC_MODE_WRITE, dep_ptr->id, 17, data, 4)){
+			//
+		}
 	}
 }
 
@@ -288,7 +294,7 @@ void dep_read_data(typeDEPStruct *dep_ptr)
 			memcpy((uint8_t*)&dep_ptr->dep_ad_frame, (uint8_t*)&dep_ad_frame_raw, sizeof(typeDepAdFrameUnion));
 		}
 		else{
-			memset((uint8_t*)&dep_ptr->dep_ad_frame, 0xFE, sizeof(dep_ptr->dep_ad_frame));
+			memset((uint8_t*)&dep_ptr->dep_ad_frame, 0xFE, sizeof(typeDepAdFrameUnion));
 		}
 
 		tmp_rec = dep_ad_frame_raw.dep.meas[0];//*(typeDEPAcqValue*)&in_data[2+i*sizeof(typeDEPAcqValue)];

@@ -209,6 +209,7 @@ uint8_t mko_bc_transaction_start_by_cw(typeMKOBCStruct *mko_ptr, uint16_t cw_var
         case TFRST_SUCCESS:
           return 1;
         default:
+          memset((uint8_t*)data, 0xFE, leng*2);
           mko_ptr->error_cnt ++;
           mko_ptr->error = result.uf.tfrst;
           return 0;
@@ -221,12 +222,12 @@ uint8_t mko_bc_transaction_start_by_cw(typeMKOBCStruct *mko_ptr, uint16_t cw_var
           return 1;
         case TFRST_ERROR_BITS:
           //TODO: возможно стоит дополнительно разобрать бит занятости
-          memset((uint8_t*)data, 0xFE, leng*2);
+          // memset((uint8_t*)data, 0xFE, leng*2);
           mko_ptr->error_cnt ++;
           mko_ptr->error = result.uf.tfrst;
           return 0;
         default:
-          memset((uint8_t*)data, 0xFE, leng*2);
+          // memset((uint8_t*)data, 0xFE, leng*2);
           mko_ptr->error_cnt ++;
           mko_ptr->error = result.uf.tfrst;
           return 0;
