@@ -12,7 +12,8 @@
 // дефайны для переменных
 #define IB_UART_BAUDRATE                  125000
 
-#define IB_PROCESS_PERIOD           100
+#define IB_STARTUP_TIMEOUT_MS             5000
+#define IB_PROCESS_PERIOD                 100
 //
 #define IB_UART_TIMEOUT_MS							  15
 
@@ -28,6 +29,7 @@
 #define MB_F_CODE_3											  0x03
 #define MB_F_CODE_6											  0x06
 #define MB_F_CODE_16										  0x10
+#define MB_F_CODE_BROAD									  0xFF
 #define MB_F_CODE_106										  0x6A  // не в стандарте ModBus
 #define MB_F_CODE_111										  0x6F  // не в стандарте ModBus
 #define MB_F_CODE_ERROR									  0x80
@@ -118,6 +120,7 @@ typedef struct
 void ib_init(typeIBStruct* ib_ptr);
 int8_t ib_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceStruct* interface);
 void ib_reset_parameters(typeIBStruct* ib_ptr);
+void ib_reset_state(typeIBStruct* ib_ptr);
 int8_t ib_run_transaction(typeIBStruct* ib_ptr, uint8_t dev_id, uint8_t f_code, uint16_t reg_addr, uint16_t reg_cnt, uint16_t* data);
 uint8_t ib_get_answer_data(typeIBStruct* ib_ptr, uint8_t* buff, uint8_t len);
 int8_t __ib_parsing_rx_data(typeIBStruct* ib_ptr, uint8_t* data, uint8_t leng, uint8_t transaction_type);

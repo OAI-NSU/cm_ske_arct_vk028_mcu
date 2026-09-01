@@ -27,10 +27,10 @@ typedef enum PWR_CH
   * @brief  распределение каналов в соответствии с enum PWR_CH
   * @note   длина совпадает с PWR_CH_NUMBER
   */
-#define PWR_CAL_RES_SHUNT_OHM   { 2.5E-1f, 1.0E0f,  1.0E0f, 1.0E0f, 1.0E0f, 1.0E0f,  1.0E0f, 1.0E0f, 1.0E0f, 1.0E0f, 1.0E0f, 1.0E0f,  1.0E0f}
-#define PWR_CAL_FB_SHUNT_OHM    { 5.1E+3f, 1.0E4f,  6.8E3f, 6.8E3f, 6.8E3f, 6.8E3f,  5.1E3f, 5.1E3f, 5.1E3f, 5.1E3f, 5.1E3f, 5.1E3f,  5.1E3f}
+#define PWR_CAL_RES_SHUNT_OHM   { 2.5E-1f, 1.0E0f,    1.0E0f, 1.0E0f, 1.0E0f, 1.0E0f,   1.0E0f, 1.0E0f, 1.0E0f, 1.0E0f, 1.0E0f, 1.0E0f,  1.0E0f}
+#define PWR_CAL_FB_SHUNT_OHM    { 5.1E+3f, 1.0E4f,    6.8E3f, 6.8E3f, 6.8E3f, 6.8E3f,   5.1E3f, 5.1E3f, 5.1E3f, 5.1E3f, 5.1E3f, 5.1E3f,  5.1E3f}
 
-#define PWR_CURRENT_BOUND       { 3*815,   3*45,    3*70,   3*70,   3*70,   3*70,    3*70,   3*70,   3*70,   3*70,   3*70,   3*70,   3*70} // граница тока в мА для каждого канала
+#define PWR_CURRENT_BOUND       { 3*815,   3*45,      3*70,   3*70,   3*70,   3*70,     3*70,   3*70,   3*70,   3*70,   3*70,   3*70,   3*70} // граница тока в мА для каждого канала
 
 #define PWR_CHANNELS_TYPES      { PWR_CH_CTRL_NU, PWR_CH_CTRL_NU, PWR_CH_FLAG, PWR_CH_FLAG, \
                                   PWR_CH_FLAG,    PWR_CH_FLAG,    PWR_CH_DV_CTRL, PWR_CH_DV_CTRL, \
@@ -47,7 +47,10 @@ typedef enum PWR_CH
 
 #define PWR_DEFAULT_HALF_SET    { 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 0, 0,  0 }
 #define PWR_INIT_TIMEOUT_MS     ( 10000 )
-#define PWR_DEFAULT_DELAY       { 0, 0,  1*300, 2*300, 3*300, 4*300,  6*300, 7*300, 8*300, 9*300, 10*300, 11*300,  13*300 }
+#define PWR_DEFAULT_DELAY       { 0,      0,      1*300,  2*300, \
+                                  3*300,  4*300,  6*300,  7*300, \
+                                  8*300,  9*300,  10*300, 11*300,\
+                                  13*300 }
 
 // Конфигурация GPIO - это массив из 5-ти GPIO: 
 // PWR_CH_CTRL_NU - не используются
@@ -75,22 +78,22 @@ typedef enum PWR_CH
                           }
 
 #define PWR_ADC_CFG       { \
-                            {2}, \
+                            {1}, \
                             {18},\
                             \
-                            {1}, \
-                            {4}, \
+                            {0}, \
                             {3}, \
-                            {6}, \
-                            \
+                            {2}, \
                             {5}, \
-                            {8}, \
-                            {7}, \
-                            {10}, \
-                            {9}, \
-                            {12}, \
                             \
-                            {11} \
+                            {4}, \
+                            {7}, \
+                            {6}, \
+                            {9}, \
+                            {8}, \
+                            {11}, \
+                            \
+                            {10} \
                           }
 
 #endif

@@ -48,7 +48,7 @@ void cm_init(
 	printf("%s: cm init start\n", now());
 	//
 	fr_mem_init(&cm_ptr->mem, FR_MEM_TYPE_WR_TO_RD_WITH_PROT_AREA);
-	printf("\t%s: frame mem init\n", now());
+	printf("%s: frame mem init\n", now());
 	//
 	cm_ptr->mko_bc_ptr = mko_bc_ptr;
 	cm_ptr->pcu_ptr = pcu_ptr;
@@ -70,7 +70,7 @@ void cm_init(
 	cm_ptr->frame_type = frame_type;
 	//
 	load_cfg_state = cm_load_cfg(cm_ptr);	// загрузка конфигурации из энергонезависимой памяти
-	printf("\t%s: cm load cfg state <%d> (-1 - Error)\n", now(), load_cfg_state);
+	printf("%s: cm load cfg state <%d> (-1 - Error)\n", now(), load_cfg_state);
 	// передача информации в дочерние структуры
 	// управление каналами питания: TODO: перенести данную инициализацию в pwr_management.c
 	if(load_cfg_state >= 0) {
@@ -379,10 +379,12 @@ int8_t cm_frame_receive(typeCMModel* cm_ptr, uint8_t* data)
 void cm_frame_handling(typeCMModel* cm_ptr)
 {
 	typeFrameStruct frame;
+	uint16_t frame_definer = 0;
 	//
 	if (cm_read_fifo(cm_ptr, &frame)){
 		// mko
-		switch (frame_get_type_from_definer(frame)){  // TODO: заготовка для разбора приходящих кадров 
+		frame_definer = frame_get_type_from_definer(frame);
+		switch (frame_definer){  // TODO: заготовка для разбора приходящих кадров 
 			default:
 				//TODO: работаем через МЦИ // mko_rt_write_to_subaddr(cm_ptr->mko_rt_ptr, frame_get_type_from_definer(frame), (uint16_t*)&frame);
 				// archive memory
@@ -390,6 +392,8 @@ void cm_frame_handling(typeCMModel* cm_ptr)
 				//
 				//TODO: временно отправляем все кадры в ВШ
 				ib_run_transaction(cm_ptr->ib_ptr, MB_DEV_ID_NU, MB_F_CODE_16, 0, 32, (uint16_t*)&frame);
+				printf("%s: retarget frame <0x%04X> to ib: ", now(), frame_definer);
+				printf_buff((uint8_t*)&frame, 8, '\n');
 			break;
 		}
 	}

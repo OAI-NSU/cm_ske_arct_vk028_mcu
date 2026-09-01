@@ -36,4 +36,6 @@
     typedef unsigned           int uint32_t;
 #endif
 
+void printf_buff(uint8_t *buff, uint8_t len, char end_char);
+
 #endif

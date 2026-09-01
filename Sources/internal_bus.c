@@ -5,7 +5,7 @@
   * @brief          : библиотека/объект для управления внутренней шиной (ВШ, IB - internal bus) ЦМ, базируется на ModBus
   * @note           : данная библиотека блокирующая, позволяет отслеживать каждую транзакцию. Поддерживается трехкратная отпрака для обеспечения доставки пакета.
   * @note           : !важно, убедиться, что любая транзакция заканчивается быстрее, чем за 25мс (важно для работы планировщика задач)
-  * @author			    : Стюф Алексей/Alexe Styuf <a-styuf@yandex.ru>
+  * @author			: Стюф Алексей/Alexe Styuf <a-styuf@yandex.ru>
   * @date						: 2021.09.20
   ******************************************************************************
   */
@@ -58,10 +58,7 @@ void ib_reset_parameters(typeIBStruct* ib_ptr)
 {
 	ib_ptr->last_call_time_us = 0;
 	//
-	ib_ptr->error_counter = 0;
-	ib_ptr->nans_counter = 0;
-	ib_ptr->error_status = 0;
-	ib_ptr->nans_status = 0;
+	ib_reset_state(ib_ptr);
 	//
 	ib_ptr->tx_counter = 0;
 	ib_ptr->rx_counter = 0;
@@ -79,6 +76,20 @@ void ib_reset_parameters(typeIBStruct* ib_ptr)
 	memset((uint8_t*)&ib_ptr->rx_frame, 0x00, sizeof(typeModBusFrameStruct));
 	memset((uint8_t*)&ib_ptr->tx_frame, 0x00, sizeof(typeModBusFrameStruct));
 	memset((uint8_t*)&ib_ptr->command_frame, 0x00, sizeof(typeModBusFrameStruct));
+}
+
+
+/**
+ * @brief сброс статистики ошибок и неответов ВШ
+ * 
+ * @param ib_ptr 
+ */
+void ib_reset_state(typeIBStruct* ib_ptr)
+{
+	ib_ptr->error_counter = 0;
+	ib_ptr->nans_counter = 0;
+	ib_ptr->error_status = 0;
+	ib_ptr->nans_status = 0;
 }
 
 /**
@@ -109,7 +120,7 @@ int8_t ib_run_transaction(typeIBStruct* ib_ptr, uint8_t dev_id, uint8_t f_code, 
 		ib_ptr->tx_frame.reg_addr = reg_addr;
 		ib_ptr->tx_frame.reg_cnt = reg_cnt;
 		ib_ptr->tx_frame.byte_cnt = reg_cnt*2;
-		if (dev_id == MB_DEV_ID_NU){
+		if ((dev_id == MB_DEV_ID_NU) || (dev_id == MB_F_CODE_BROAD)){
 			memcpy((uint8_t*)ib_ptr->tx_frame.data, (uint8_t*)data, reg_cnt*2);
 			ib_ptr->transaction_type = MB_TRANSACTION_WRITE_BROAD;
 		}
@@ -166,13 +177,16 @@ int8_t ib_run_transaction(typeIBStruct* ib_ptr, uint8_t dev_id, uint8_t f_code, 
 				if (dev_id != MB_DEV_ID_NU){
 					ib_ptr->nans_status |= (1<<dev_id);
 					ib_ptr->nans_counter += 1;
+					return -1;
+				}
+				else{
+					return 0;
 				}
 				//
 				//for (i = 0; i < ib_ptr->rx_len; i++){
 					// printf("%02X", ib_ptr->rx_data[i]);
 				//}
 				// printf(":%d\n", ib_ptr->rx_len);
-				return -1;
 			case(MB_UART_CRC_ERROR):
 			case(MB_UART_UNEXPECTED_FRAME):
 			case(MB_UART_RX_STATUS_EXCEPTION):

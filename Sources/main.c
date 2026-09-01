@@ -19,22 +19,23 @@
 #include "mpp.h"
 #include "gen_mpp.h"
 #include "pcu.h"
+// #include "dir.h"
 
 //***Общие настройки***//
 
 //версия прошивки
-#define CM_SW_VERSION 			  "0.05"
+#define CM_SW_VERSION 			  "0.07"
 // номер устройства
-#define FRAME_DEV_ID 			    231 // (230 - отработочный как в СКЭ-Луна)
+#define FRAME_DEV_ID 			    235 // 235 236 237 238 239
 
 //
-extern uint32_t SystemCoreClock;  /*100_000_000*/
+extern uint32_t SystemCoreClock;  /*80_000_000*/
 // создание объектов отдельных программных моделей 
 type_GPIO_OAI_cm gpio;
 typeADCStruct adc;
 typeTPStruct tp;
 typeCMModel cm; 
-type_GPIO_PCU pcu;
+type_GPIO_PCU pcu; 
 typePower pwr;
 typeIBStruct ib;
 type_STM_Model stm;
@@ -297,6 +298,20 @@ void cm_dbg_ib_command_handler(typeCMModel* cm_ptr)
 			}
 		}
 	}
+}
+
+/**
+  * @brief  вывод на экран массива hex-значений
+  * @param  buff: указатель на блок памяти
+  * @param  len: длина данных
+  * @param  end_char: символ окончания вывода
+  */
+void printf_buff(uint8_t *buff, uint8_t len, char end_char)
+{
+  for (uint8_t i=0; i<len; i++){
+    printf("%02X ", buff[i]);
+  }
+  printf("%c", end_char);
 }
 
 void ADC_SEQ0_CallBack(void)

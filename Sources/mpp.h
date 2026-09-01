@@ -10,6 +10,13 @@
 #include "clock.h"
 #include "mpp_conf.h"
 
+#ifndef MIN
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
+#ifndef MAX
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
+#endif
+
 // дефайны для переменных
 #define MPP_REC_FIFO_DEPTH 4
 
@@ -17,8 +24,9 @@
 
 #define MPP_FORCE_START_PERIOD_TIMEOUT 1
 
-#define MPP_EVENT_MEAS_INTERVAL_START (1 << 0)
-#define MPP_EVENT_MEAS_INTERVAL_DATA_READY (1 << 1)
+#define MPP_EVENT_MEAS_INTERVAL_START       (1 << 0)
+#define MPP_EVENT_MEAS_INTERVAL_DATA_READY  (1 << 1)
+#define MPP_EVENT_ARCH_FRAME_DATA_READY     (1 << 6)
 
 /// костыль для работы с отдельными каналами МПП
 #define MPP_CHANNEL_REQUEST_SHIFT_MS (1000)
@@ -59,6 +67,12 @@ typedef struct
   uint16_t Noise;      //+22
 } typeMPPRec;          // 24
 
+typedef struct
+{
+  uint16_t ch_id;
+  typeMPPRec rec;
+} typeMPPRec_full;
+
 /**
  * @brief  разобранная структура помехи МПП
  */
@@ -74,6 +88,11 @@ typedef struct
   float Noise;      //+22
 } typeMPPRecParc;   // 24
 
+typedef struct
+{
+  float ch_id;
+  typeMPPRecParc rec;
+} typeMPPRecParc_full;
 
 typedef struct
 {
@@ -136,7 +155,8 @@ typedef union
     uint16_t header[5];           //+0
     typeRP_Body rp_body;          //+10
     uint16_t changed_meas_interv; //+58
-    uint16_t reserve;             //+60
+    uint16_t offset;              //+60
+    uint16_t reserve;             //+62
     uint16_t crc16;
   } rp;
 } typeRP_FrameUnion;
@@ -161,6 +181,7 @@ typedef struct
   //
   uint16_t pwr_off_bound, mode, const_mode, mpp_max_survey_ena; // данные установки
   uint16_t offset_to_set;
+  uint16_t loaded_offset;
   float offs_float;
   uint32_t arch_cnt;
   uint8_t bound_to_set[3];
@@ -175,10 +196,14 @@ typedef struct
   uint8_t rp_frame_data_ready; // флаг готовности данных в памяти на отправку в другой процесс
   // mpp data
   typeMPPFrameUnion frame, mko_frame;
-  uint8_t frame_data_ready; // флаг готовности данных в памяти на отправку в другой процесс
-  typeMPPRec rec_buff[MPP_REC_FIFO_DEPTH];
-  typeMPPRecParc rec_buff_parced[MPP_REC_FIFO_DEPTH];
+  uint8_t frame_data_ready, arch_frame_data_ready; // флаг готовности данных в памяти на отправку в другой процесс
+  typeMPPRec_full rec_buff[MPP_REC_FIFO_DEPTH];
+  typeMPPRecParc_full rec_buff_parsed[MPP_REC_FIFO_DEPTH];
   uint8_t rec_ptr;
+  typeMPPRec_full last_rec_full[2];
+  typeMPPRecParc_full last_rec_full_parsed[2];
+  uint16_t last_rec_cnt;
+  //
   typeMPPMatrixVal matrix_raw;
   typeMPPWindowChannel win_raw;
   // general
@@ -189,7 +214,7 @@ typedef struct
   //
   uint16_t current_meas_interval;  // данные для хранения измерительного интервала
   // cyclogram_ctrl
-  typeCyclograma meas_cyclo, rp_cyclo;
+  typeCyclograma meas_cyclo, rp_cyclo, arch_cyclo;
 } typeMPPStruct;
 
 #pragma pack(pop)
@@ -200,7 +225,7 @@ void mpp_reset_parameters(typeMPPStruct *mpp_ptr);
 //
 int8_t mpp_process_tp(void *ctrl_struct, uint64_t time_us, typeProcessInterfaceStruct *interface);
 //
-int8_t mpp_frame_forming(typeMPPStruct *mpp_ptr);
+int8_t mpp_frame_forming(typeMPPStruct *mpp_ptr, uint8_t arch_frame);
 void mpp_mko_frame_forming(typeMPPStruct* mpp_ptr);
 void mpp_set_calibr(typeMPPStruct* mpp_ptr, float k, float b);
 void mpp_write_offset_to_set(typeMPPStruct* mpp_ptr, uint16_t offset_to_set);
@@ -227,10 +252,11 @@ void mpp_win_get(typeMPPStruct *mpp_ptr);
 //
 void mpp_struct_request(typeMPPStruct *mpp_ptr);
 void mpp_struct_get(typeMPPStruct *mpp_ptr);
-typeMPPRecParc mpp_parc_rec(typeMPPStruct* mpp_ptr, typeMPPRec rec);
+typeMPPRecParc_full mpp_parc_rec(typeMPPStruct* mpp_ptr, typeMPPRec_full rec);
 
 // функции для работы циклограммы измерительного интервала
 void mpp_meas_cycl_init(typeMPPStruct *mpp_ptr);
+void mpp_arch_frame_cycl_init(typeMPPStruct *mpp_ptr);
 int32_t mpp_meas_cycl_on(void *ctrl_struct, uint8_t *data);
 int32_t mpp_meas_cycl_arch_offset_get(void *ctrl_struct, uint8_t *data);
 int32_t mpp_meas_cycl_struct_request(void *ctrl_struct, uint8_t *data);
@@ -239,9 +265,11 @@ int32_t mpp_meas_cycl_forced_start(void *ctrl_struct, uint8_t *data);
 int32_t mpp_meas_cycl_win_val_get(void *ctrl_struct, uint8_t *data);
 int32_t mpp_meas_cycl_set_offset(void *ctrl_struct, uint8_t *data);
 int32_t mpp_meas_cycl_set_win_bnd(void *ctrl_struct, uint8_t *data);
+int32_t mpp_meas_cycl_frame_forming(void* ctrl_struct, uint8_t* data);
 int32_t mpp_meas_cycl_rp_frame_forming(void* ctrl_struct, uint8_t* data);
 int32_t mpp_meas_cycl_arch_init(void* ctrl_struct, uint8_t* data);
+int32_t mpp_meas_cycl_time_set(void* ctrl_struct, uint8_t* data);
 //
-void __mpp_struct_rev(typeMPPRec *mpp_struct_ptr);
+void __mpp_struct_rev(typeMPPRec_full *mpp_struct_ptr);
 //
 #endif

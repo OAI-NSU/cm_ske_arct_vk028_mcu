@@ -587,6 +587,11 @@
               <FileType>1</FileType>
               <FilePath>.\Sources\pcu.c</FilePath>
             </File>
+            <File>
+              <FileName>mci.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Sources\mci.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1306,6 +1311,11 @@
               <FileName>pcu.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Sources\pcu.c</FilePath>
+            </File>
+            <File>
+              <FileName>mci.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Sources\mci.c</FilePath>
             </File>
           </Files>
         </Group>
