@@ -392,8 +392,8 @@ void cm_frame_handling(typeCMModel* cm_ptr)
 				//
 				//TODO: временно отправляем все кадры в ВШ
 				ib_run_transaction(cm_ptr->ib_ptr, MB_DEV_ID_NU, MB_F_CODE_16, 0, 32, (uint16_t*)&frame);
-				printf("%s: retarget frame <0x%04X> to ib: ", now(), frame_definer);
-				printf_buff((uint8_t*)&frame, 8, '\n');
+				// printf("%s: retarget frame <0x%04X> to ib: ", now(), frame_definer);
+				// printf_buff((uint8_t*)&frame, 8, '\n');
 			break;
 		}
 	}

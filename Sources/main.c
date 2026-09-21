@@ -19,12 +19,13 @@
 #include "mpp.h"
 #include "gen_mpp.h"
 #include "pcu.h"
+#include "mci.h"
 // #include "dir.h"
 
 //***Общие настройки***//
 
 //версия прошивки
-#define CM_SW_VERSION 			  "0.07"
+#define CM_SW_VERSION 			  "0.08"
 // номер устройства
 #define FRAME_DEV_ID 			    235 // 235 236 237 238 239
 
@@ -35,7 +36,8 @@ type_GPIO_OAI_cm gpio;
 typeADCStruct adc;
 typeTPStruct tp;
 typeCMModel cm; 
-type_GPIO_PCU pcu; 
+type_GPIO_PCU pcu;
+typeMCIStruct mci;
 typePower pwr;
 typeIBStruct ib;
 type_STM_Model stm;
@@ -145,6 +147,7 @@ void __main_process_registration_box(void)
 	tp_process_registration(&tp, &pwr_process_tp, &pwr, 0, 0);
   tp_process_registration(&tp, &stm_process_tp, &stm, 0, 0);
   tp_process_registration(&tp, &pcu_process_tp, &pcu, 0, 0);
+  tp_process_registration(&tp, &mci_process_tp, &mci, 0, 0);
 
 	// Процессы периферийных устройств
 	for (uint8_t uint8_var = 0; uint8_var < MPP_DEV_NUM; uint8_var++){
@@ -195,6 +198,8 @@ void __main_base_init(void)
   printf("%s: pwr init\n", now());
   pcu_init(&pcu);
   printf("%s: pcu init\n", now());
+  mci_init(&mci);
+  printf("%s: mci init\n", now());
   //
   //TODO: добавить инициализацию МПИ
   //
@@ -324,6 +329,8 @@ void ADC_SEQ0_CallBack(void)
 void SysTick_Handler(void) 
 {
   tp_timer_handler(&tp, 1000);
+  // mci
+  mci_tx_preparation(&mci, 1000);
 }
 
 void INT_PORT_CallBack(GPIO_TypeDef *port, uint8_t line)
@@ -343,6 +350,17 @@ void INT_PORT_CallBack(GPIO_TypeDef *port, uint8_t line)
     break;
   }
 }
+
+void SPI1_TX_IRQHandler() 
+{
+  mci_spi_tx_irq_handler(&mci, 0);
+}
+
+void SPI3_TX_IRQHandler() 
+{
+  mci_spi_tx_irq_handler(&mci, 1);
+}
+
 
 void HardFault_Handler(void)
 {

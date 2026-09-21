@@ -15,7 +15,8 @@ void mci_init(typeMCIStruct *mci_ptr)
 {
   mci_ptr->spi_inst[0] = SPI1;
   mci_ptr->spi_inst[1] = SPI3;
-
+  RCU->HCLKCFG_bit.GPIOCEN = 1;
+  RCU->HRSTCFG_bit.GPIOCEN = 1;
   /* PC5: SPI1_SCK,  PC6: SPI1_TX,  PC4: SPI1_FSS,  PC12: SPI3_SCK,  PC14: SPI3_TX,  PC15: SPI3_FSS */
   GPIOC->DENSET = (1<<15) | (1<<14) | (1<<12) | (1<<6) | (1<<5) | (1<<4);
   GPIOC->ALTFUNCSET = (1<<15) | (1<<14) | (1<<12) | (1<<6) | (1<<5) | (1<<4);
@@ -31,39 +32,60 @@ void mci_init(typeMCIStruct *mci_ptr)
   /*GPIO filters*/
   GPIOC->QUALSET = (1<<12);
   GPIOC->QUALMODESET = (1<<12);
+  //
+  mci_clean_fifo(mci_ptr);
+  mci_ptr->transaction_cnter[0] = 0;
+  mci_ptr->transaction_cnter[1] = 0;
+  mci_ptr->timeout_us[0] = 0;
+  mci_ptr->timeout_us[1] = 0;
+  mci_ptr->reinit_done[0] = 0;
+  mci_ptr->reinit_done[1] = 0;
   /* SPI1 */
-  mci_reset_parameters(mci_ptr, 0);
+  mci_reinit_spi(mci_ptr, 0);
   /* SPI3 */
-  mci_reset_parameters(mci_ptr, 1);
+  mci_reinit_spi(mci_ptr, 1);
+  //
+  mci_clean_buf(mci_ptr, 0);
+  mci_clean_buf(mci_ptr, 1);
   /**/
   NVIC_EnableIRQ( SPI1_TX_IRQn );
   NVIC_EnableIRQ( SPI3_TX_IRQn );
 }
 
-void mci_reset_parameters(typeMCIStruct *mci_ptr, uint8_t spi_num)
+void mci_reinit_spi(typeMCIStruct *mci_ptr, uint8_t spi_num)
 {
   SPI_TypeDef *spi_ptr = mci_ptr->spi_inst[spi_num];
   uint32_t nss_port_msk;
+
   if(spi_num == 0)  {
     nss_port_msk = (1<<2);
+
     RCU->SPICFG[1].SPICFG_bit.RSTDIS = 0;
+    for(uint32_t delay = 1; delay>0; delay--){
+      __NOP();
+    }
     RCU->SPICFG[1].SPICFG = RCU_SPICFG_SPICFG_DIVEN_Msk | (1<<8) | RCU_SPICFG_SPICFG_RSTDIS_Msk | RCU_SPICFG_SPICFG_CLKEN_Msk;
   }
   else {
     nss_port_msk = (1<<13);
+
     RCU->SPICFG[3].SPICFG_bit.RSTDIS = 0;
+    for(uint32_t delay = 1; delay>0; delay--){
+      __NOP();
+    }
     RCU->SPICFG[3].SPICFG = RCU_SPICFG_SPICFG_DIVEN_Msk | (1<<8) | RCU_SPICFG_SPICFG_RSTDIS_Msk | RCU_SPICFG_SPICFG_CLKEN_Msk;
   }
   GPIOC->DATAOUTSET = nss_port_msk;
 
   mci_ptr->tx_ena[spi_num] = 0;
-  mci_ptr->transaction_timeout[spi_num] = 0;
-  mci_clear_fifo(mci_ptr);
+  mci_ptr->timeout_us[spi_num] = 0;
 
   spi_ptr->CR0 = SPI_CR0_SPH_Msk | (8 - 1);  // 8 bit
   spi_ptr->CR1 = SPI_CR1_MS_Msk | SPI_CR1_SSE_Msk;  // Slave
   spi_ptr->IMSC_bit.TXIM = 1;
   GPIOC->DATAOUTCLR = nss_port_msk;
+	//
+	mci_ptr->reinit_done[spi_num] = 1;
 }
 
 /**
@@ -78,15 +100,6 @@ int8_t mci_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceS
 		mci_ptr->call_interval_us = time_us - mci_ptr->last_call_time_us;
 		mci_ptr->last_call_time_us = time_us;
 		//
-    for (uint8_t mci_num = 0; mci_num < 2; mci_num++){
-      if (mci_ptr->tx_ena[mci_num]) mci_ptr->timeout_us[mci_num] += mci_ptr->call_interval_us;
-      if (mci_ptr->timeout_us[mci_num] >= MCI_TRANS_TIMEOUT_MS*1000) {
-        mci_ptr->timeout_us[mci_num] = 0;
-        mci_ptr->tx_ena[mci_num] = 0;
-        // блок подготовки новых данных
-      }
-    }
-		//
 		return 1;
 	}
 	else {
@@ -94,20 +107,128 @@ int8_t mci_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceS
 	}
 }
 
-void mci_clear_fifo(typeMCIStruct *mci_ptr)
+uint8_t mci_tx_preparation(typeMCIStruct *mci_ptr, uint64_t interval_us)
 {
-  __NOP();
+  //
+  for (uint8_t mci_num = 0; mci_num < 2; mci_num++){
+    if (mci_ptr->tx_ena[mci_num]) {
+      mci_ptr->timeout_us[mci_num] += interval_us;
+      // if(mci_num == 0) printf("us %d %lu\n", 4, mci_ptr->timeout_us[mci_num]);
+    }
+    else if ((mci_ptr->tx_ena[mci_num] == 0) && (mci_ptr->timeout_us[mci_num] != 0)) {
+      mci_ptr->timeout_us[mci_num] = 0;
+    }
+    if ((mci_ptr->tx_ena[mci_num]) && (mci_ptr->timeout_us[mci_num] >= MCI_TRANS_TIMEOUT_MS*1000)) {
+      if (mci_num == 0) __NVIC_DisableIRQ(SPI1_TX_IRQn);
+      else if (mci_num == 1) __NVIC_DisableIRQ(SPI3_TX_IRQn);
+      mci_ptr->timeout_us[mci_num] = 0;
+      mci_ptr->tx_ena[mci_num] = 0;
+      mci_ptr->transaction_cnter[mci_num]++;
+      mci_clean_buf(mci_ptr, mci_num);
+      // блок подготовки новых данных
+      mci_fill_buf(mci_ptr, mci_num);
+      
+      // if(mci_num == 0) printf("timeout %d %d\n", 3, mci_ptr->transaction_cnter[mci_num]);
+      mci_reinit_spi(mci_ptr, mci_num);
+      if (mci_num == 0) __NVIC_EnableIRQ(SPI1_TX_IRQn);
+      else if (mci_num == 1) __NVIC_EnableIRQ(SPI3_TX_IRQn);
+    }
+  } 
+	return 0;
 }
 
+/**
+ * @brief Заполнение кадрами массива информации для МЦИ либо заполнителем (0xFE)
+ * 
+ * @param mci_ptr 
+ */
+void mci_fill_buf(typeMCIStruct *mci_ptr, uint8_t spi_num)
+{
+  uint8_t frame[sizeof(typeFrameStruct)] = {0};
+  uint8_t header_buff[6] = MCI_HEADER_LABEL;
 
-void SPIx_TX_IRQHandler(typeMCIStruct *mci_ptr, int spi_num) {
-  SPI_TypeDef  *spi_ptr = mci_ptr->spi_inst[spi_num];
-  if(spi_num == 0)   spi_ptr = (SPI_TypeDef*)SPI1_BASE;
-  else               spi_ptr = (SPI_TypeDef*)SPI3_BASE;
-  if(mci_ptr->tx_ena[spi_num]) mci_ptr->transaction_timeout[spi_num] = MCI_TRANS_TIMEOUT_MS;  // 6 ms timeout for gap
-  while( spi_ptr->SR_bit.TNF ) {
-    spi_ptr->DR = mci_ptr->buffer.buffer.array[mci_ptr->buffer.rd_ptr];
-    if(mci_ptr->buffer.rd_ptr >= sizeof(type_MCI_FRAME_FIFO))  mci_ptr->buffer.rd_ptr = 0;
+  memset((uint8_t*)mci_ptr->buffer[spi_num].buffer.array, 0xFE, sizeof(type_MCI_FRAME_BUFFER));
+
+  memcpy(&mci_ptr->buffer[spi_num].buffer.fd.header.mci_label[0], header_buff, sizeof(header_buff));
+  mci_ptr->buffer[spi_num].buffer.fd.header.time_s = clock_get_time_s();
+  
+  for (uint8_t frame_num=0; frame_num < MCI_BUFF_FRAMES; frame_num++){
+    if (mci_read_fifo(mci_ptr,  frame)){
+      memcpy((uint8_t*)&mci_ptr->buffer[spi_num].buffer.fd.frame[frame_num], frame, sizeof(typeFrameStruct));
+    }
+    else{
+      break;
+    }
   }
-  mci_ptr->tx_ena[spi_num] = 1;
 }
+
+void mci_clean_buf(typeMCIStruct *mci_ptr, uint8_t spi_num)
+{
+  memset((uint8_t*)&mci_ptr->buffer[spi_num].buffer, 0xFE, sizeof(type_MCI_FRAME_BUFFER));
+  mci_ptr->buffer[spi_num].rd_ptr = 0;
+}
+
+
+void mci_clean_fifo(typeMCIStruct *mci_ptr)
+{
+  memset((uint8_t*)&mci_ptr->fifo, 0x00, sizeof(type_MCI_Frame_FIFO));
+}
+
+int8_t mci_write_fifo(typeMCIStruct *mci_ptr, uint8_t *frame)
+{
+  if (mci_ptr->fifo.rec_num >= MCI_FIFO_DEPTH){
+		return 0;
+	}
+	else{
+		memcpy((uint8_t*)&mci_ptr->fifo.rec_fifo[mci_ptr->fifo.rec_num], (uint8_t*)frame, sizeof(typeFrameStruct));
+		mci_ptr->fifo.rec_num += 1;
+		if (mci_ptr->fifo.rec_num > mci_ptr->fifo.rec_max) mci_ptr->fifo.rec_max = mci_ptr->fifo.rec_num;  //сбор информации о заполненности fifo
+		return 1;
+	}
+}
+
+int8_t mci_read_fifo(typeMCIStruct *mci_ptr, uint8_t *frame)
+{
+  if (mci_ptr->fifo.rec_num == 0){
+		return 0;
+	}
+	else{
+		mci_ptr->fifo.rec_num -= 1;
+		memcpy((uint8_t*)frame, (uint8_t*)&mci_ptr->fifo.rec_fifo[0], sizeof(typeFrameStruct));
+		memmove((uint8_t*)&mci_ptr->fifo.rec_fifo[0], (uint8_t*)&mci_ptr->fifo.rec_fifo[1], sizeof(typeFrameStruct)*mci_ptr->fifo.rec_num);
+		memset((uint8_t*)&mci_ptr->fifo.rec_fifo[mci_ptr->fifo.rec_num], 0x00, sizeof(typeFrameStruct)*(MCI_FIFO_DEPTH - mci_ptr->fifo.rec_num));
+		return 1;
+	}
+}
+
+uint8_t mci_get_fifo_state(typeMCIStruct *mci_ptr)
+{
+  return mci_ptr->fifo.rec_num;
+}
+
+
+void mci_spi_tx_irq_handler(typeMCIStruct *mci_ptr, int spi_num) 
+{
+	
+  SPI_TypeDef  *spi_ptr = mci_ptr->spi_inst[spi_num];
+	//
+	// if(spi_num == 0) printf("0x%08X\t", spi_ptr->SR);
+	//
+  if(mci_ptr->tx_ena[spi_num]) mci_ptr->timeout_us[spi_num] = 0;  // 6 ms timeout for gap
+  while( spi_ptr->SR_bit.TNF ) {
+    spi_ptr->DR = mci_ptr->buffer[spi_num].buffer.array[mci_ptr->buffer[spi_num].rd_ptr++];
+    if(mci_ptr->buffer[spi_num].rd_ptr >= sizeof(type_MCI_Data_Frame))  {
+			mci_ptr->buffer[spi_num].rd_ptr = 0;
+		}
+  }
+	//
+	if (mci_ptr->reinit_done[spi_num]) {
+		mci_ptr->reinit_done[spi_num] = 0;
+		// if(spi_num == 0) printf("%d\n", 0);
+	}
+	else{
+		mci_ptr->tx_ena[spi_num] = 1;
+		// if(spi_num == 0) printf("%d\n", 1);
+	}
+}
+
