@@ -25,7 +25,7 @@
 //***Общие настройки***//
 
 //версия прошивки
-#define CM_SW_VERSION 			  "0.08"
+#define CM_SW_VERSION 			  "0.09"
 // номер устройства
 #define FRAME_DEV_ID 			    235 // 235 236 237 238 239
 
@@ -65,7 +65,7 @@ int main() {
   // базовая инициализация
   SystemCoreClockUpdate();
   retarget_init();
-  SysTick_Config(SystemCoreClock/1000);  // 1 ms  interrupt period
+  SysTick_Config(SystemCoreClock/(1000));  // 1 ms  interrupt period
   //
   __main_base_init();
   //
@@ -214,7 +214,8 @@ void __main_base_init(void)
             &stm,
             FRAME_DEV_ID,
             CM_SW_VERSION,
-            CM+1);  // инициализация объекта программной модели ЦМ (включает в себя все периферийные модели ЦМ: ВШ, МКО, GPIO, ADC и т.п.)
+            CM+1, 
+            &mci);  // инициализация объекта программной модели ЦМ (включает в себя все периферийные модели ЦМ: ВШ, МКО, GPIO, ADC и т.п.)
 	// включение периферии
 	__main_init_peripheral_modules();
 	// отключение планировщика задач
@@ -329,8 +330,6 @@ void ADC_SEQ0_CallBack(void)
 void SysTick_Handler(void) 
 {
   tp_timer_handler(&tp, 1000);
-  // mci
-  mci_tx_preparation(&mci, 1000);
 }
 
 void INT_PORT_CallBack(GPIO_TypeDef *port, uint8_t line)
@@ -361,6 +360,11 @@ void SPI3_TX_IRQHandler()
   mci_spi_tx_irq_handler(&mci, 1);
 }
 
+void ETMR0_IRQHandler(void)
+{
+  mci_tx_preparation(&mci, MCI_TRANS_STEP_MS*1000);
+  ETMR0->INTCLR_bit.INTCLR = 1;
+}
 
 void HardFault_Handler(void)
 {

@@ -10,15 +10,19 @@
 #include "cyclogramma.h"
 #include "clock.h"
 
-#define     MCI_DATA_FRAME_SIZE         (502)
+#define     MCI_DATA_FRAME_SIZE         (512)
 #define     MCI_BUFF_FRAMES             (7)
 #define     MCI_TRANS_TIMEOUT_MS        (10)
+#define     MCI_TRANS_STEP_MS           (2)
 
 #define     MCI_PROCESS_PERIOD          (1)
 
 #define     MCI_HEADER_LABEL            {0x00, 0x0E, 0x0E, 0x00, 0x00, 0x00}
 
 #define     MCI_FIFO_DEPTH              (14)
+
+//структуры кадров
+#pragma pack(push, 1)
 
 /**
  * @brief Заголовок буфера для передачи по МЦИ
@@ -41,6 +45,8 @@ typedef union{
     uint8_t array[MCI_DATA_FRAME_SIZE];
     uint16_t arr_u16[MCI_DATA_FRAME_SIZE/2];
 }type_MCI_FRAME_BUFFER;
+
+#pragma pack(pop)
 
 /** 
   * @brief  циклический буфер на базе буфера для МЦИ

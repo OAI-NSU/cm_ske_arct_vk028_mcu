@@ -125,7 +125,7 @@
         <SetRegEntry>
           <Number>0</Number>
           <Key>ST-LINKIII-KEIL_SWO</Key>
-          <Name>-U0108304053431232004E4B35 -O9455 -SF1800 -C0 -A0 -I0 -HNlocalhost -HP7184 -P1 -N00("ARM CoreSight SW-DP") -D00(2BA01477) -L00(0) -TO131347 -TC80000000 -TT2000000 -TP21 -TDS27 -TDT0 -TDC1F -TIE1 -TIP1 -FO31 -FD20000000 -FC8000 -FN1 -FF0K1921VK028.FLM -FS00 -FL0200000 -FP0($$Device:K1921VK028$Flash\K1921VK028.FLM)</Name>
+          <Name>-U0108293553431232004E4B35 -O9455 -SF1800 -C0 -A0 -I0 -HNlocalhost -HP7184 -P1 -N00("ARM CoreSight SW-DP") -D00(2BA01477) -L00(0) -TO274 -TC80000000 -TT2000000 -TP21 -TDS27 -TDT0 -TDC1F -TIE1 -TIP1 -FO31 -FD20000000 -FC8000 -FN1 -FF0K1921VK028.FLM -FS00 -FL0200000 -FP0($$Device:K1921VK028$Flash\K1921VK028.FLM)</Name>
         </SetRegEntry>
         <SetRegEntry>
           <Number>0</Number>
@@ -164,6 +164,11 @@
           <count>2</count>
           <WinNumber>1</WinNumber>
           <ItemText>mci</ItemText>
+        </Ww>
+        <Ww>
+          <count>3</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>cm.mem</ItemText>
         </Ww>
       </WatchWindow1>
       <WatchWindow2>
@@ -276,12 +281,6 @@
       <pszMrulep></pszMrulep>
       <pSingCmdsp></pSingCmdsp>
       <pMultCmdsp></pMultCmdsp>
-      <SystemViewers>
-        <Entry>
-          <Name>System Viewer\SPI1</Name>
-          <WinId>35905</WinId>
-        </Entry>
-      </SystemViewers>
     </TargetOption>
   </Target>
 

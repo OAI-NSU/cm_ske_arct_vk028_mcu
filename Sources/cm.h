@@ -14,6 +14,7 @@
 #include "stm.h"
 #include "mpp_conf.h"
 #include "pcu.h"
+#include "mci.h"
 
 #define CM_HANDLER_INTERVAL_MS   500
 
@@ -258,6 +259,7 @@ typedef struct
 	typeFRAME_MEM mem;
 	type_SINGLE_GPIO *hs_io_ptr;
 	type_STM_Model *stm_ptr;
+	typeMCIStruct *mci_ptr;
 	//
 	uint16_t sw_version;
 	//
@@ -292,7 +294,8 @@ void cm_init(
 				type_STM_Model *stm_ptr,
 				uint16_t device_number, 
 				char* ver_str, 
-				uint16_t frame_type
+				uint16_t frame_type,
+				typeMCIStruct *mci_ptr
 			);
 void cm_reset_parameters(typeCMModel* cm_ptr);
 int8_t cm_load_cfg(typeCMModel* cm_ptr);

@@ -42,7 +42,8 @@ void cm_init(
 				type_STM_Model *stm_ptr,
 				uint16_t device_number, 
 				char* ver_str, 
-				uint16_t frame_type)
+				uint16_t frame_type,
+				typeMCIStruct *mci_ptr)
 {
 	int8_t load_cfg_state=0;
 	printf("%s: cm init start\n", now());
@@ -56,6 +57,7 @@ void cm_init(
 	cm_ptr->hs_io_ptr = hs_io_ptr;
 	cm_ptr->stm_ptr = stm_ptr;
 	cm_ptr->pwr_ptr = pwr_ptr;
+	cm_ptr->mci_ptr = mci_ptr;
 	//
 	cm_reset_parameters(cm_ptr);
 	cm_ptr->id = id;
@@ -223,6 +225,7 @@ int8_t cm_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceSt
 	int8_t device = 0;
 	uint8_t retval=0;
 	typeCMModel* cm_ptr = (typeCMModel*)ctrl_struct;
+	typeFrameStruct frame;
 	//
 	if ((time_us - cm_ptr->last_call_time_us) > (CM_HANDLER_INTERVAL_MS*1000)) {
 		cm_ptr->call_interval_us = time_us - cm_ptr->last_call_time_us;
@@ -339,6 +342,12 @@ int8_t cm_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceSt
 	}
 	// обработка собранных кадров
 	cm_frame_handling(cm_ptr);
+	// заполнение буфера МЦИ
+	if(mci_get_fifo_state(cm_ptr->mci_ptr)){
+		if (fr_mem_read_data_frame(&cm_ptr->mem, (uint8_t*)&frame)){
+			mci_write_fifo(cm_ptr->mci_ptr, (uint8_t*)&frame);
+		}
+	}
 	// обработка командных сообщений ПКУ
 	cm_pcu_command_interface_handler(cm_ptr);
 	// обработка отладочных сообщений по ВШ

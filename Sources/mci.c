@@ -44,12 +44,27 @@ void mci_init(typeMCIStruct *mci_ptr)
   mci_reinit_spi(mci_ptr, 0);
   /* SPI3 */
   mci_reinit_spi(mci_ptr, 1);
+  // Таймер для МЦИ - ETMR0
+  
+  RCU->PCLKCFG0 |= RCU_PCLKCFG0_ETMR0EN_Msk;
+  RCU->PRSTCFG0 |= RCU_PRSTCFG0_ETMR0EN_Msk;
+  ETMR0->LOAD = ((uint64_t)(SystemCoreClock / (2 * 256)) * MCI_TRANS_STEP_MS) / 1000;
+
+  ETMR0->CTRL_bit.PERMODE = 1;
+  ETMR0->CTRL_bit.INTEN = 1;
+  ETMR0->CTRL_bit.PRESC = 2;  //  0 - 1, 1 - 16, 2 - 256, 3 - RESERVE
+  ETMR0->CTRL_bit.SIZE32 = 1;
+  ETMR0->CTRL_bit.ONESH = 0;
+
+  ETMR0->CTRL_bit.ON = 1;
+  
   //
   mci_clean_buf(mci_ptr, 0);
   mci_clean_buf(mci_ptr, 1);
   /**/
   NVIC_EnableIRQ( SPI1_TX_IRQn );
   NVIC_EnableIRQ( SPI3_TX_IRQn );
+  NVIC_EnableIRQ( ETMR0_IRQn );
 }
 
 void mci_reinit_spi(typeMCIStruct *mci_ptr, uint8_t spi_num)
@@ -113,14 +128,15 @@ uint8_t mci_tx_preparation(typeMCIStruct *mci_ptr, uint64_t interval_us)
   for (uint8_t mci_num = 0; mci_num < 2; mci_num++){
     if (mci_ptr->tx_ena[mci_num]) {
       mci_ptr->timeout_us[mci_num] += interval_us;
-      // if(mci_num == 0) printf("us %d %lu\n", 4, mci_ptr->timeout_us[mci_num]);
+      if(mci_num == 0) printf("%s: us %d %lu\n", now(), 4,(unsigned long)mci_ptr->timeout_us[mci_num]);
     }
     else if ((mci_ptr->tx_ena[mci_num] == 0) && (mci_ptr->timeout_us[mci_num] != 0)) {
       mci_ptr->timeout_us[mci_num] = 0;
     }
     if ((mci_ptr->tx_ena[mci_num]) && (mci_ptr->timeout_us[mci_num] >= MCI_TRANS_TIMEOUT_MS*1000)) {
-      if (mci_num == 0) __NVIC_DisableIRQ(SPI1_TX_IRQn);
-      else if (mci_num == 1) __NVIC_DisableIRQ(SPI3_TX_IRQn);
+      if (mci_num == 0) NVIC_DisableIRQ(SPI1_TX_IRQn);
+      else if (mci_num == 1) NVIC_DisableIRQ(SPI3_TX_IRQn);
+      NVIC_DisableIRQ( ETMR0_IRQn );
       mci_ptr->timeout_us[mci_num] = 0;
       mci_ptr->tx_ena[mci_num] = 0;
       mci_ptr->transaction_cnter[mci_num]++;
@@ -128,10 +144,11 @@ uint8_t mci_tx_preparation(typeMCIStruct *mci_ptr, uint64_t interval_us)
       // блок подготовки новых данных
       mci_fill_buf(mci_ptr, mci_num);
       
-      // if(mci_num == 0) printf("timeout %d %d\n", 3, mci_ptr->transaction_cnter[mci_num]);
+      if(mci_num == 0) printf("%s: timeout %d %d\n", now(), 3, mci_ptr->transaction_cnter[mci_num]);
       mci_reinit_spi(mci_ptr, mci_num);
-      if (mci_num == 0) __NVIC_EnableIRQ(SPI1_TX_IRQn);
-      else if (mci_num == 1) __NVIC_EnableIRQ(SPI3_TX_IRQn);
+      if (mci_num == 0) NVIC_EnableIRQ(SPI1_TX_IRQn);
+      else if (mci_num == 1) NVIC_EnableIRQ(SPI3_TX_IRQn);
+      NVIC_EnableIRQ( ETMR0_IRQn );
     }
   } 
 	return 0;
@@ -203,13 +220,13 @@ int8_t mci_read_fifo(typeMCIStruct *mci_ptr, uint8_t *frame)
 
 uint8_t mci_get_fifo_state(typeMCIStruct *mci_ptr)
 {
-  return mci_ptr->fifo.rec_num;
+  if (mci_ptr->fifo.rec_num >= MCI_FIFO_DEPTH) return 0;
+  return 1;
 }
 
 
 void mci_spi_tx_irq_handler(typeMCIStruct *mci_ptr, int spi_num) 
 {
-	
   SPI_TypeDef  *spi_ptr = mci_ptr->spi_inst[spi_num];
 	//
 	// if(spi_num == 0) printf("0x%08X\t", spi_ptr->SR);
