@@ -39,12 +39,12 @@ typedef enum devices_list
 enum cm_interval_list
 {
 	CM_INTERV_SYS, CM_INTERV_MEAS, CM_INTERVAL_SPEED, CM_INTERVAL_DBG,
-	CM_1S_INTERVAL,
+	CM_1S_INTERVAL, CM_INTERV_DIR, 
 	CM_INTERV_NUMBER
 };
-// #define DEFAULT_CM_INTERV_VALUES_S					{10, 	120, 	2, 		10, 	1}
-#define DEFAULT_CM_INTERV_VALUES_S					{5, 	5,	 	2, 		10, 	1}
-#define DEFAULT_CM_DEFAULT_START_TIME_S				{15, 	15,		16, 	16, 	16}
+// #define DEFAULT_CM_INTERV_VALUES_S				{10, 	120, 	2, 		10, 	1, 		120}
+#define DEFAULT_CM_INTERV_VALUES_S					{5, 	5,	 	2, 		10, 	1, 		120}
+#define DEFAULT_CM_DEFAULT_START_TIME_S				{15, 	15,		16, 	16, 	16, 	120}
 
 #define CM_EVENT_MEAS_INTERVAL_START       			(1<<0)
 #define CM_EVENT_MEAS_INTERVAL_DATA_READY  			(1<<1)
@@ -71,38 +71,44 @@ enum cm_interval_list
 #define dep_frame_num 0x09
 #define bdep_frame_num 0x0A
 */
-#define CM_MKO_SA_SYS     							(1)
+#define CM_FR_TYPE_SYS		     							(0)
 
-#define CM_MKO_SA_MPP1    							(2)
-#define CM_MKO_SA_MPP2    							(3)
-#define CM_MKO_SA_MPP3    							(4)
-#define CM_MKO_SA_MPP4    							(5)
+#define CM_FR_TYPE_MPP_1		    						(1)
+#define CM_FR_TYPE_MPP_2		    						(2)
+#define CM_FR_TYPE_MPP_3		    						(3)
+#define CM_FR_TYPE_MPP_4		    						(4)
+#define CM_FR_TYPE_MPP_5		    						(5)
+#define CM_FR_TYPE_MPP_6		    						(6)
+#define CM_FR_TYPE_MPP_7		    						(7)
+#define CM_FR_TYPE_MPP_8		    						(8)
 
-#define CM_MKO_SA_MATRIX  							(6)
-#define CM_MKO_SA_WIND    							(7)
+#define CM_FR_TYPE_MKKD			    						(9)
 
-#define CM_MKO_SA_DEP_AD1 							(8)
-#define CM_MKO_SA_DEP_AD2 							(9)
-#define CM_MKO_SA_DEP_AD3 							(10)
-#define CM_MKO_SA_DEP_AD4 							(11)
-#define CM_MKO_SA_DEP_AD5 							(12)
-#define CM_MKO_SA_DEP_AD6 							(13)
-#define CM_MKO_SA_DEP_AD7 							(14)
-#define CM_MKO_SA_DEP_AD8 							(15)
+#define CM_FR_TYPE_MATRIX_0			  						(10)
+#define CM_FR_TYPE_MATRIX_1			  						(11)
+#define CM_FR_TYPE_MATRIX_2			  						(12)
+#define CM_FR_TYPE_WIND_0    								(13)
+#define CM_FR_TYPE_WIND_1    								(14)
+#define CM_FR_TYPE_WIND_2    								(15)
 
-#define CM_MKO_SA_MKKD     							(16)
 
-#define CM_MKO_SA_CMD								(0x11)
+#define CM_FR_TYPE_ALT_DEP_AD_1_DEP							(0)
+#define CM_FR_TYPE_ALT_DEP_AD_2_DEP							(1)
+#define CM_FR_TYPE_ALT_DEP_AD_3_DEP							(2)
+#define CM_FR_TYPE_ALT_DEP_AD_4_DEP							(3)
+#define CM_FR_TYPE_ALT_DEP_AD_5_DEP							(4)
+#define CM_FR_TYPE_ALT_DEP_AD_6_DEP							(5)
+#define CM_FR_TYPE_ALT_DEP_AD_7_DEP							(6)
+#define CM_FR_TYPE_ALT_DEP_AD_8_DEP							(7)
 
-#define CM_MKO_SA_ARCH_REQUEST_CM					(0x12)
-#define CM_MKO_SA_ARCH_REQUEST_MPP					(0x13)
-
-#define CM_MKO_SA_ARCH_READ_CM						(0x14)  //TODO: Проверить нумерацию подадресов
-
-#define CM_MKO_SA_TECH_CMD							(0x1E)
-#define CM_MKO_SA_TECH_RD							(0x1C)
-
-#define CM_MKO_SA_SYNC_TIME							(0x1D)
+#define CM_FR_TYPE_ALT_DEP_AD_1_RP 							(8)
+#define CM_FR_TYPE_ALT_DEP_AD_2_RP 							(9)
+#define CM_FR_TYPE_ALT_DEP_AD_3_RP 							(10)
+#define CM_FR_TYPE_ALT_DEP_AD_4_RP 							(11)
+#define CM_FR_TYPE_ALT_DEP_AD_5_RP 							(12)
+#define CM_FR_TYPE_ALT_DEP_AD_6_RP 							(13)
+#define CM_FR_TYPE_ALT_DEP_AD_7_RP 							(14)
+#define CM_FR_TYPE_ALT_DEP_AD_8_RP 							(15)
 
 // debug interface that based on IB
 #define CM_SELF_MB_ID  (1)  // для отладочных команд

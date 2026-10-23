@@ -27,6 +27,8 @@
 #define MPP_EVENT_MEAS_INTERVAL_START       (1 << 0)
 #define MPP_EVENT_MEAS_INTERVAL_DATA_READY  (1 << 1)
 #define MPP_EVENT_ARCH_FRAME_DATA_READY     (1 << 6)
+#define MPP_EVENT_MATRIX_REC_DATA_READY     (1 << 7)
+#define MPP_EVENT_WINDOW_REC_DATA_READY     (1 << 8)
 
 /// костыль для работы с отдельными каналами МПП
 #define MPP_CHANNEL_REQUEST_SHIFT_MS (1000)
@@ -96,9 +98,9 @@ typedef struct
 
 typedef struct
 {
-  uint32_t time;
-  uint16_t amplitude;
-} typeMPPMatrixVal;
+  uint32_t time;        // +0
+  uint16_t amplitude;   // +4
+} typeMPPMatrixVal;     // 6
 
 /**
  * @brief значение оконных параметров канала МПП
@@ -106,9 +108,9 @@ typedef struct
  */
 typedef struct
 {
-  uint16_t bound[3];    //+0
-  uint16_t num[3];      //+3
-} typeMPPWindowChannel; // 6
+  uint16_t bound[3];    // +0
+  uint16_t num[3];      // +6
+} typeMPPWindowChannel; // 12
 
 /**
  * @brief  структура кадр МПП
@@ -162,6 +164,22 @@ typedef union
 } typeRP_FrameUnion;
 
 /**
+ * @brief  структура кадр МПП
+ */
+typedef union
+{
+  uint8_t array[128];
+  struct
+  {
+    typeFrameStruct frame;            // +0
+    uint16_t current_meas_interval;   // +64
+    typeMPPMatrixVal matrix_rec;      // +66
+    typeMPPWindowChannel window_rec;  // +72
+    uint8_t reserve[44];              // +84
+  } fd;
+} type_MPP_Shared_vol;                // 128
+
+/**
  * @brief  структура управления МПП
  */
 typedef struct
@@ -185,9 +203,6 @@ typedef struct
   float offs_float;
   uint32_t arch_cnt;
   uint8_t bound_to_set[3];
-  // to task_planner
-  uint8_t meas_event_num;
-  uint64_t last_call_time_us;
   // rp data
   typeRP_FrameUnion rp_frame, mko_rp_frame;
   typeRP_Body rp_raw_body;
@@ -210,11 +225,16 @@ typedef struct
   uint8_t forced_start_flag;    // флаг необходимости принудительного запуска
   uint8_t forced_start_timeout; // таймаут на запуск принудительного старта
   uint8_t frame_pulse_cnt;      // количество считанных помех с последнего формирования кадра
-  uint8_t arch_init_flag;    // флаг необходимости принудительного запуска
+  uint8_t arch_init_flag;       // флаг необходимости принудительного запуска
+  uint8_t win_flag_ready;       // флаг готовности данных окон
   //
   uint16_t current_meas_interval;  // данные для хранения измерительного интервала
   // cyclogram_ctrl
   typeCyclograma meas_cyclo, rp_cyclo, arch_cyclo;
+  // to task_planner
+  uint8_t meas_event_num;
+  type_MPP_Shared_vol *sh_vol;
+  uint64_t last_call_time_us, call_interval_us;
 } typeMPPStruct;
 
 #pragma pack(pop)

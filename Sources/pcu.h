@@ -7,7 +7,7 @@
 
 #pragma pack(push, 2)
 
-#define PСU_CMD_PER_LVL_NUMS      (6)
+#define PСU_CMD_PER_LVL_NUMS      (8)
 
 #define PCU_CMD_THRESHOLD_MS      (1000)
 #define PCU_CMD_WAITING_MS        (10000)

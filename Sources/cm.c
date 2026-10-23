@@ -289,6 +289,13 @@ int8_t cm_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceSt
 		// user code end
 		retval = 1;
 	}
+	//
+	if (cm_interval_processor(cm_ptr, CM_INTERV_DIR, time_us)) {
+		// user code begin
+		interface->event[MKKD] |= CM_EVENT_MEAS_INTERVAL_START;
+		// user code end
+		retval = 1;
+	}
 	// Обработка запуска измерения периферии с использованием либо стандартного интервала измерения или ускоренного
 	if (cm_ptr->ctrl.speedy_mode_state){
 		if (cm_ptr->ctrl.speedy_event){
@@ -401,8 +408,8 @@ void cm_frame_handling(typeCMModel* cm_ptr)
 				//
 				//TODO: временно отправляем все кадры в ВШ
 				ib_run_transaction(cm_ptr->ib_ptr, MB_DEV_ID_NU, MB_F_CODE_16, 0, 32, (uint16_t*)&frame);
-				// printf("%s: retarget frame <0x%04X> to ib: ", now(), frame_definer);
-				// printf_buff((uint8_t*)&frame, 8, '\n');
+				printf("%s: retarget frame <0x%04X> to ib: ", now(), frame_definer);
+				printf_buff((uint8_t*)&frame, 8, '\n');
 			break;
 		}
 	}

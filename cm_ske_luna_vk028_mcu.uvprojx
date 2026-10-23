@@ -592,6 +592,11 @@
               <FileType>1</FileType>
               <FilePath>.\Sources\mci.c</FilePath>
             </File>
+            <File>
+              <FileName>mkkd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Sources\mkkd.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1316,6 +1321,11 @@
               <FileName>mci.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Sources\mci.c</FilePath>
+            </File>
+            <File>
+              <FileName>mkkd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Sources\mkkd.c</FilePath>
             </File>
           </Files>
         </Group>

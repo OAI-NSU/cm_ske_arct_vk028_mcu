@@ -25,7 +25,16 @@
  * @param gl_fr_num указатель на сквозной глобальный номер кадра
  * @param mpp_type тип МПП: МПП или РП
  */
-void mpp_init(typeMPPStruct* mpp_ptr, uint8_t self_num, uint8_t id, uint16_t device_number, uint16_t frame_type, uint8_t channel, uint32_t offset, typeIBStruct* ib_ptr, uint32_t* gl_fr_num, uint8_t mpp_type)
+void mpp_init(	typeMPPStruct* mpp_ptr, 
+				uint8_t self_num, 
+				uint8_t id, 
+				uint16_t device_number, 
+				uint16_t frame_type, 
+				uint8_t channel, 
+				uint32_t offset, 
+				typeIBStruct* ib_ptr, 
+				uint32_t* gl_fr_num, 
+				uint8_t mpp_type )
 {
 	mpp_reset_parameters(mpp_ptr);
 	mpp_ptr->mpp_type = mpp_type;
@@ -77,17 +86,21 @@ void mpp_reset_parameters(typeMPPStruct* mpp_ptr)
 	mpp_ptr->forced_start_timeout = 0;
 	mpp_ptr->frame_pulse_cnt = 0;
 	mpp_ptr->last_call_time_us = 0;
+	mpp_ptr->call_interval_us = 0;
 	mpp_ptr->const_mode = 0;
 	mpp_ptr->interval_ms = MPP_DEFAULT_INTERVAL_MS;
 	mpp_ptr->meas_event_num = 0;
 	mpp_ptr->start_collect_data_time = 0;
 	mpp_ptr->arch_init_flag = 0;
+	mpp_ptr->win_flag_ready = 0;
 	//
 	mpp_ptr->last_rec_cnt = 0;
 	//
 	mpp_set_calibr(mpp_ptr, 1.0, 0.0);
 	//
 	mpp_ptr->mpp_max_survey_ena = 0;
+	//
+	mpp_ptr->sh_vol = NULL;
 }
 
 /**
@@ -99,19 +112,38 @@ int8_t mpp_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceS
 {
 	uint8_t retval = 0;
 	typeMPPStruct* mpp_ptr = (typeMPPStruct*)ctrl_struct;
-	/// запус обработчика по интервалу
+	/// запуск обработчика по интервалу
 	if ((time_us - mpp_ptr->last_call_time_us) > (mpp_ptr->interval_ms*1000)) {
+		mpp_ptr->call_interval_us = time_us - mpp_ptr->last_call_time_us;
 		mpp_ptr->last_call_time_us = time_us;
 		// user code begin
+		//
+		if (mpp_ptr->sh_vol == NULL) mpp_ptr->sh_vol = (type_MPP_Shared_vol*)&interface->shared_mem[0];
+		//
 		mpp_ptr->current_meas_interval = *(uint16_t*)&interface->shared_mem[64];
 		if((cyclo_get_operation_status(&mpp_ptr->meas_cyclo) == 0) && (mpp_ptr->mpp_max_survey_ena)){
+			if(mpp_ptr)
 			mpp_mtrx_max_val_get(mpp_ptr);
 			mpp_rp_mtrx_val_process(mpp_ptr, mpp_ptr->matrix_raw.amplitude);
+			// matrix data transmit to general block
+			if((interface->event[mpp_ptr->self_num] & MPP_EVENT_MATRIX_REC_DATA_READY) == 0){
+				mpp_ptr->sh_vol->fd.matrix_rec = mpp_ptr->matrix_raw;
+				interface->event[mpp_ptr->self_num] |= MPP_EVENT_MATRIX_REC_DATA_READY;
+			}
+		}
+		//
+		if (mpp_ptr->win_flag_ready){
+			mpp_ptr->win_flag_ready = 0;
+			//
+			if((interface->event[mpp_ptr->self_num] & MPP_EVENT_WINDOW_REC_DATA_READY) == 0){
+				mpp_ptr->sh_vol->fd.window_rec = mpp_ptr->win_raw;
+				interface->event[mpp_ptr->self_num] |= MPP_EVENT_WINDOW_REC_DATA_READY;
+			}
 		}
 		// user code end
 		retval = 1;
 	}
-	// обработка event-ов  //todo: сделать специальные фукнции обработки event-ов
+	// обработка event-ов  //todo: сделать специальные функции обработки event-ов
 	if (interface->event[mpp_ptr->self_num] & MPP_EVENT_MEAS_INTERVAL_START) 
 	{
 		interface->event[mpp_ptr->self_num] &= ~MPP_EVENT_MEAS_INTERVAL_START;
@@ -516,9 +548,7 @@ void mpp_win_get(typeMPPStruct* mpp_ptr)
 		mpp_ptr->win_raw.bound[0] 	= __REV16(*(uint16_t*)&in_data[0]);
 		mpp_ptr->win_raw.bound[1] 	= __REV16(*(uint16_t*)&in_data[2]);
 		mpp_ptr->win_raw.bound[2] 	= __REV16(*(uint16_t*)&in_data[4]);
-		if(mpp_ptr->win_raw.bound[2] == 0) {
-			printf("error");
-		}
+		//
 		mpp_ptr->win_raw.num[0] 	= __REV16(*(uint16_t*)&in_data[12]);
 		mpp_ptr->win_raw.num[1] 	= __REV16(*(uint16_t*)&in_data[14]);
 		mpp_ptr->win_raw.num[2] 	= __REV16(*(uint16_t*)&in_data[16]);
@@ -526,6 +556,8 @@ void mpp_win_get(typeMPPStruct* mpp_ptr)
 	else{
 		memset((uint8_t *)&mpp_ptr->win_raw, 0xFE, sizeof(typeMPPWindowChannel));
 	}
+	// matrix data transmit to general block
+	mpp_ptr->win_flag_ready = 1;
 }
 
 
@@ -733,6 +765,7 @@ int32_t mpp_meas_cycl_win_val_get(void* ctrl_struct, uint8_t* data)
 {
 	typeMPPStruct* mpp_ptr = (typeMPPStruct*) ctrl_struct;
 	mpp_win_get(mpp_ptr);
+	//
 	return 0;
 }
 

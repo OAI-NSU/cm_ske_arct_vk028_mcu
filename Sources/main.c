@@ -20,14 +20,15 @@
 #include "gen_mpp.h"
 #include "pcu.h"
 #include "mci.h"
-// #include "dir.h"
+#include "mkkd.h"
 
 //***Общие настройки***//
 
 //версия прошивки
-#define CM_SW_VERSION 			  "0.09"
+#define CM_SW_VERSION 			  "0.10"
 // номер устройства
 #define FRAME_DEV_ID 			    235 // 235 236 237 238 239
+#define FRAME_DEV_ID_ALT 			236 // дополнительный dev_id для расширения пула типов кадров
 
 //
 extern uint32_t SystemCoreClock;  /*80_000_000*/
@@ -45,8 +46,8 @@ typeMKOBCStruct mko_bc;
 //
 typeMPPStruct mpp[MPP_DEV_NUM];   //! программная модель периферийных модулей МПП
 typeGEN_MPP_Struct gmpp;          
-typeDEPStruct dep[8];
-// typeMKKDStruct mkkd;
+typeDEPStruct dep_ad[8];
+typeMKKDStruct mkkd;
 //
 void SystemCoreClockUpdate(void);
 
@@ -90,14 +91,14 @@ void __main_init_peripheral_modules(void)
 	float mpp_ch_b[MPP_DEV_NUM] = MPP_CHAN_B;
 
   uint32_t dep_id[DEP_AD8 - DEP_AD1 + 1] = { 1, 2, 3, 4, 5, 6, 7, 8};
-  uint32_t dep_sa[DEP_AD8 - DEP_AD1 + 1] = {  CM_MKO_SA_DEP_AD1, 
-                                              CM_MKO_SA_DEP_AD2, 
-                                              CM_MKO_SA_DEP_AD3, 
-                                              CM_MKO_SA_DEP_AD4, 
-                                              CM_MKO_SA_DEP_AD5, 
-                                              CM_MKO_SA_DEP_AD6, 
-                                              CM_MKO_SA_DEP_AD7, 
-                                              CM_MKO_SA_DEP_AD8};
+  uint32_t dep_sa[DEP_AD8 - DEP_AD1 + 1] = {  CM_FR_TYPE_ALT_DEP_AD_1_DEP, 
+                                              CM_FR_TYPE_ALT_DEP_AD_2_DEP, 
+                                              CM_FR_TYPE_ALT_DEP_AD_3_DEP, 
+                                              CM_FR_TYPE_ALT_DEP_AD_4_DEP, 
+                                              CM_FR_TYPE_ALT_DEP_AD_5_DEP, 
+                                              CM_FR_TYPE_ALT_DEP_AD_6_DEP, 
+                                              CM_FR_TYPE_ALT_DEP_AD_7_DEP, 
+                                              CM_FR_TYPE_ALT_DEP_AD_8_DEP};
 
 	uint8_t uint8_var = 0;
 	/**
@@ -106,10 +107,10 @@ void __main_init_peripheral_modules(void)
 	for (uint8_var = 0; uint8_var<MPP_DEV_NUM; uint8_var++){
     if(MPP1 + uint8_var <= MPP_DEV_NUM){
       mpp_init(	&mpp[uint8_var], 
-                uint8_var, 
+                MPP1 + uint8_var, 
                 mpp_ib_id[uint8_var], 
                 FRAME_DEV_ID, 
-                CM_MKO_SA_MPP1 + uint8_var, 
+                CM_FR_TYPE_MPP_1 + uint8_var, 
                 mpp_ch_num[uint8_var], 
                 mpp_offsets_array[uint8_var], 
                 cm.ib_ptr, 
@@ -118,20 +119,28 @@ void __main_init_peripheral_modules(void)
       mpp_set_calibr(&mpp[uint8_var], mpp_ch_k[uint8_var], mpp_ch_b[uint8_var]);
     }
 	}
-  gmpp_init(&gmpp, GMPP, FRAME_DEV_ID, CM_MKO_SA_MATRIX, CM_MKO_SA_WIND, &cm.global_frame_num, mpp);
 	
+  gmpp_init(&gmpp, GMPP, FRAME_DEV_ID, CM_FR_TYPE_MATRIX_0, CM_FR_TYPE_WIND_0, &cm.global_frame_num);
+	
+  mkkd_init(  &mkkd, 
+              MKKD, 
+              10, 
+              FRAME_DEV_ID, 
+              CM_FR_TYPE_MKKD, 
+              cm.mko_bc_ptr, 
+              &cm.global_frame_num);
+
   for (uint8_var = DEP_AD1; uint8_var <= DEP_AD8; uint8_var++){
-    dep_init( &dep[uint8_var - DEP_AD1], 
+    dep_init( &dep_ad[uint8_var - DEP_AD1], 
               uint8_var, 
               dep_id[uint8_var - DEP_AD1], 
-              FRAME_DEV_ID, 
+              FRAME_DEV_ID_ALT,
               dep_sa[uint8_var - DEP_AD1],
               cm.ib_ptr,
               cm.mko_bc_ptr,
               &cm.global_frame_num,
               DEP_MODE_MKO );
   }
-	// mkkd_init(&mkkd, MKKD, 10, FRAME_DEV_ID, CM_MKO_SA_DND, cm.ib_ptr, &cm.global_frame_num);
 }
 
 // Командный интерфейс
@@ -155,11 +164,11 @@ void __main_process_registration_box(void)
 	}
 
   for (uint8_t uint8_var = 0; uint8_var < 8; uint8_var++){
-		tp_process_registration(&tp, &dep_process_tp, &dep[uint8_var], 128*(DEP_AD1+uint8_var), 128);
+		tp_process_registration(&tp, &dep_process_tp, &dep_ad[uint8_var], 128*(DEP_AD1+uint8_var), 128);
 	}
-  // tp_process_registration(&tp, &gmpp_process_tp, &gmpp, 128*GMPP, 128);
+  tp_process_registration(&tp, &gmpp_process_tp, &gmpp, 0, TP_SHARED_MEM_VOL_B);
   //TODO: добавить МККД
-	// tp_process_registration(&tp, &dir_process_tp, &dir, 128*(DIR), 128);
+	tp_process_registration(&tp, &mkkd_process_tp, &mkkd, 128*(MKKD), 128);
 }
 
 /**

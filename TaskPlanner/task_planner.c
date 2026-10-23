@@ -57,7 +57,7 @@ int8_t tp_process_registration(typeTPStruct* tp_ptr, int8_t (*action) (void*, ui
       tp_ptr->process[i].interface.event = tp_ptr->event;
       tp_ptr->process[i].interface.shared_mem = &tp_ptr->shared_mem[sh_mem_offset];
       tp_ptr->process[i].interface.shared_mem_len = sh_mem_len;
-      if(sh_mem_offset + sh_mem_len >= TP_SHARED_MEM_VOL_B) {
+      if(sh_mem_offset + sh_mem_len > TP_SHARED_MEM_VOL_B) {
         tp_ptr->error_counter++;
         return -1;
       }

@@ -153,6 +153,9 @@ int8_t ib_run_transaction(typeIBStruct* ib_ptr, uint8_t dev_id, uint8_t f_code, 
 			//
 			ib_ptr->nans_status |= (1<<dev_id);
 			ib_ptr->nans_counter += 1;
+			if(dev_id == 4){
+				__BKPT(0);
+			}
 		}
 		// //
 		// mko_irq_ena(); // отключение прерываний, которые мешают пакетному приему
@@ -177,6 +180,9 @@ int8_t ib_run_transaction(typeIBStruct* ib_ptr, uint8_t dev_id, uint8_t f_code, 
 				if (dev_id != MB_DEV_ID_NU){
 					ib_ptr->nans_status |= (1<<dev_id);
 					ib_ptr->nans_counter += 1;
+					// if(dev_id == 4){
+ 					//  	__BKPT(0);
+					//}		
 					return -1;
 				}
 				else{
