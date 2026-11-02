@@ -40,6 +40,8 @@ void mci_init(typeMCIStruct *mci_ptr)
   mci_ptr->timeout_us[1] = 0;
   mci_ptr->reinit_done[0] = 0;
   mci_ptr->reinit_done[1] = 0;
+  memset((uint8_t*)mci_ptr->transaction_bit_cnter, 0x00, sizeof(mci_ptr->transaction_bit_cnter));
+  memset((uint8_t*)mci_ptr->transaction_bit_cnter_num, 0x00, sizeof(mci_ptr->transaction_bit_cnter_num));
   /* SPI1 */
   mci_reinit_spi(mci_ptr, 0);
   /* SPI3 */
@@ -128,7 +130,6 @@ uint8_t mci_tx_preparation(typeMCIStruct *mci_ptr, uint64_t interval_us)
   for (uint8_t mci_num = 0; mci_num < 2; mci_num++){
     if (mci_ptr->tx_ena[mci_num]) {
       mci_ptr->timeout_us[mci_num] += interval_us;
-      if(mci_num == 0) printf("%s: us %d %lu\n", now(), 4,(unsigned long)mci_ptr->timeout_us[mci_num]);
     }
     else if ((mci_ptr->tx_ena[mci_num] == 0) && (mci_ptr->timeout_us[mci_num] != 0)) {
       mci_ptr->timeout_us[mci_num] = 0;
@@ -139,12 +140,12 @@ uint8_t mci_tx_preparation(typeMCIStruct *mci_ptr, uint64_t interval_us)
       NVIC_DisableIRQ( ETMR0_IRQn );
       mci_ptr->timeout_us[mci_num] = 0;
       mci_ptr->tx_ena[mci_num] = 0;
+      mci_ptr->transaction_bit_cnter_num[mci_num] = (++mci_ptr->transaction_bit_cnter_num[mci_num]) % 8;
+      mci_ptr->transaction_bit_cnter[mci_num][mci_ptr->transaction_bit_cnter_num[mci_num]] = 0;
       mci_ptr->transaction_cnter[mci_num]++;
       mci_clean_buf(mci_ptr, mci_num);
       // блок подготовки новых данных
       mci_fill_buf(mci_ptr, mci_num);
-      
-      if(mci_num == 0) printf("%s: timeout %d %d\n", now(), 3, mci_ptr->transaction_cnter[mci_num]);
       mci_reinit_spi(mci_ptr, mci_num);
       if (mci_num == 0) NVIC_EnableIRQ(SPI1_TX_IRQn);
       else if (mci_num == 1) NVIC_EnableIRQ(SPI3_TX_IRQn);
@@ -228,24 +229,20 @@ uint8_t mci_get_fifo_state(typeMCIStruct *mci_ptr)
 void mci_spi_tx_irq_handler(typeMCIStruct *mci_ptr, int spi_num) 
 {
   SPI_TypeDef  *spi_ptr = mci_ptr->spi_inst[spi_num];
-	//
-	// if(spi_num == 0) printf("0x%08X\t", spi_ptr->SR);
-	//
   if(mci_ptr->tx_ena[spi_num]) mci_ptr->timeout_us[spi_num] = 0;  // 6 ms timeout for gap
   while( spi_ptr->SR_bit.TNF ) {
     spi_ptr->DR = mci_ptr->buffer[spi_num].buffer.array[mci_ptr->buffer[spi_num].rd_ptr++];
-    if(mci_ptr->buffer[spi_num].rd_ptr >= sizeof(type_MCI_Data_Frame))  {
+    mci_ptr->transaction_bit_cnter[spi_num][mci_ptr->transaction_bit_cnter_num[spi_num]]++;
+    if(mci_ptr->buffer[spi_num].rd_ptr >= sizeof(type_MCI_FRAME_BUFFER))  {
 			mci_ptr->buffer[spi_num].rd_ptr = 0;
 		}
   }
 	//
 	if (mci_ptr->reinit_done[spi_num]) {
 		mci_ptr->reinit_done[spi_num] = 0;
-		// if(spi_num == 0) printf("%d\n", 0);
 	}
 	else{
 		mci_ptr->tx_ena[spi_num] = 1;
-		// if(spi_num == 0) printf("%d\n", 1);
 	}
 }
 

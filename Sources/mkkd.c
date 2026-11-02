@@ -45,8 +45,8 @@ void mkkd_init(  	typeMKKDStruct* mkkd_ptr,
 void mkkd_reset_parameters(typeMKKDStruct* mkkd_ptr)
 {
 	// зануление данных на передачу в МКО и память
-	memset((uint8_t*)&mkkd_ptr->frame[0], 0xFE, sizeof(mkkd_ptr->frame));
-	memset((uint8_t*)&mkkd_ptr->frame[1], 0xFE, sizeof(mkkd_ptr->frame));
+	memset((uint8_t*)&mkkd_ptr->self_frame[0], 0xFE, sizeof(mkkd_ptr->self_frame));
+	memset((uint8_t*)&mkkd_ptr->self_frame[1], 0xFE, sizeof(mkkd_ptr->self_frame));
 	memset((uint8_t*)&mkkd_ptr->fifo, 0x00, sizeof(typeFrameStruct)*MKKD_REC_FIFO_DEPTH);
 	mkkd_ptr->frame_data_ready = 0x00;
 	//
@@ -66,7 +66,7 @@ int8_t mkkd_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterface
 {
 	uint8_t retval = 0;
 	typeMKKDStruct* mkkd_ptr = (typeMKKDStruct*)ctrl_struct;
-	typeFrameStruct frame;
+	typeFrameStruct self_frame;
 	/// запуск обработчика по интервалу
 	if ((time_us - mkkd_ptr->last_call_time_us) > (mkkd_ptr->interval_ms*1000)) {
 		mkkd_ptr->call_interval_us = time_us - mkkd_ptr->last_call_time_us;
@@ -89,9 +89,9 @@ int8_t mkkd_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterface
 	//обработка циклограммы
 	cyclo_handler(&mkkd_ptr->meas_cyclo, time_us/1000);
 	//обработка передачи данных
-	if(mkkd_read_fifo(mkkd_ptr, &frame))
+	if(mkkd_read_fifo(mkkd_ptr, &self_frame))
 	{
-		memcpy(interface->shared_mem, (uint8_t*)&frame, sizeof(typeFrameStruct));
+		memcpy(interface->shared_mem, (uint8_t*)&self_frame, sizeof(typeFrameStruct));
 		interface->event[mkkd_ptr->self_num] |= MKKD_EVENT_MEAS_INTERVAL_DATA_READY;
 	}
 	return retval;
@@ -157,22 +157,22 @@ void mkkd_synch_time(typeMKKDStruct *mkkd_ptr)
   */
 void mkkd_read_data(typeMKKDStruct *mkkd_ptr)
 {
-	typeFrameStruct frame[2];
+	typeFrameStruct self_frame[2];
 	//
-	if (mko_bc_transaction_start_with_bus_find(mkkd_ptr->mko_bc_ptr, MKO_BC_MODE_READ, mkkd_ptr->id, 4, (uint16_t*)&frame[0], 32)) {
-		memcpy((uint8_t*)&mkkd_ptr->frame[0], (uint8_t*)&frame[0], sizeof(typeMKKD_Self_Frame));
-		mkkd_write_fifo(mkkd_ptr, &frame[0]);
+	if (mko_bc_transaction_start_with_bus_find(mkkd_ptr->mko_bc_ptr, MKO_BC_MODE_READ, mkkd_ptr->id, 4, (uint16_t*)&self_frame[0], 32)) {
+		memcpy((uint8_t*)&mkkd_ptr->self_frame[0], (uint8_t*)&self_frame[0], sizeof(typeMKKD_Self_Frame));
+		mkkd_write_fifo(mkkd_ptr, &self_frame[0]);
 	}
 	else{
-		memset((uint8_t*)&mkkd_ptr->frame[0], 0xFE, sizeof(typeMKKD_Self_Frame));
+		memset((uint8_t*)&mkkd_ptr->self_frame[0], 0xFE, sizeof(typeMKKD_Self_Frame));
 	}
 	//
-	if (mko_bc_transaction_start_with_bus_find(mkkd_ptr->mko_bc_ptr, MKO_BC_MODE_READ, mkkd_ptr->id, 5, (uint16_t*)&frame[1], 32)) {
-		memcpy((uint8_t*)&mkkd_ptr->frame[1], (uint8_t*)&frame[1], sizeof(typeMKKD_Self_Frame));
-		mkkd_write_fifo(mkkd_ptr, &frame[1]);
+	if (mko_bc_transaction_start_with_bus_find(mkkd_ptr->mko_bc_ptr, MKO_BC_MODE_READ, mkkd_ptr->id, 5, (uint16_t*)&self_frame[1], 32)) {
+		memcpy((uint8_t*)&mkkd_ptr->self_frame[1], (uint8_t*)&self_frame[1], sizeof(typeMKKD_Self_Frame));
+		mkkd_write_fifo(mkkd_ptr, &self_frame[1]);
 	}
 	else{
-		memset((uint8_t*)&mkkd_ptr->frame[1], 0xFE, sizeof(typeMKKD_Self_Frame));
+		memset((uint8_t*)&mkkd_ptr->self_frame[1], 0xFE, sizeof(typeMKKD_Self_Frame));
 	}
 }
 

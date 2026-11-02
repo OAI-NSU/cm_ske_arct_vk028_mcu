@@ -288,8 +288,8 @@ void gmpp_matrix_frame_forming(typeGEN_MPP_Struct* gmpp_ptr)
 						gmpp_ptr->matrix_frame[frame_num].mpp.matrix_string[str_num].amplitude[num] = 0xFE;
 					}
 				}
-				gmpp_ptr->matrix_frame[frame_num].mpp.matrix_string[str_num].time = \
-									(frame_time_s - gmpp_ptr->mpp_mtrx_array[current_device_num].time) & 0xFFFF;
+				gmpp_ptr->matrix_frame[frame_num].mpp.matrix_string[str_num].time = (gmpp_ptr->mpp_mtrx_array[current_device_num].time != 0) ?
+									(frame_time_s - gmpp_ptr->mpp_mtrx_array[current_device_num].time) & 0xFFFF : 0x0000;
 			}
 			else{
 				break;

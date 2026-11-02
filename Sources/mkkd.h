@@ -67,7 +67,7 @@ typedef struct
   // to task_planner
   uint8_t meas_event_num;
   // data
-  typeMKKD_Self_Frame frame[2];
+  typeMKKD_Self_Frame self_frame[2];
   uint8_t frame_data_ready;  // флаг готовности данных в памяти на отправку в другой процесс
   // cyclogram_ctrl
   typeCyclograma meas_cyclo;

@@ -79,6 +79,8 @@ typedef struct
     uint8_t tx_ena[2];
     uint8_t reinit_done[2];
     uint32_t transaction_cnter[2];
+    uint32_t transaction_bit_cnter[2][8];
+    uint32_t transaction_bit_cnter_num[2];
     //
     uint64_t last_call_time_us, call_interval_us;
 } typeMCIStruct;

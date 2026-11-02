@@ -25,7 +25,7 @@
 //***Общие настройки***//
 
 //версия прошивки
-#define CM_SW_VERSION 			  "0.10"
+#define CM_SW_VERSION 			  "0.11"
 // номер устройства
 #define FRAME_DEV_ID 			    235 // 235 236 237 238 239
 #define FRAME_DEV_ID_ALT 			236 // дополнительный dev_id для расширения пула типов кадров
@@ -223,7 +223,7 @@ void __main_base_init(void)
             &stm,
             FRAME_DEV_ID,
             CM_SW_VERSION,
-            CM+1, 
+            CM, 
             &mci);  // инициализация объекта программной модели ЦМ (включает в себя все периферийные модели ЦМ: ВШ, МКО, GPIO, ADC и т.п.)
 	// включение периферии
 	__main_init_peripheral_modules();

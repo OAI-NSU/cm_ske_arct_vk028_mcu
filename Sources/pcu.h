@@ -9,8 +9,8 @@
 
 #define PСU_CMD_PER_LVL_NUMS      (8)
 
-#define PCU_CMD_THRESHOLD_MS      (1000)
-#define PCU_CMD_WAITING_MS        (10000)
+#define PCU_CMD_THRESHOLD_MS      (500)
+#define PCU_CMD_WAITING_MS        (3000)
 
 #define PCU_HANDLER_INTERVAL_MS   (50)
 
