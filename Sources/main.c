@@ -25,7 +25,7 @@
 //***Общие настройки***//
 
 //версия прошивки
-#define CM_SW_VERSION 			  "0.11"
+#define CM_SW_VERSION 			  "0.12"
 // номер устройства
 #define FRAME_DEV_ID 			    235 // 235 236 237 238 239
 #define FRAME_DEV_ID_ALT 			236 // дополнительный dev_id для расширения пула типов кадров
@@ -244,6 +244,10 @@ void cm_pcu_command_interface_handler(typeCMModel *cm_ptr)
   uint32_t default_intervals[CM_INTERV_NUMBER] = DEFAULT_CM_INTERV_VALUES_S;
   uint32_t intervals_60[CM_INTERV_NUMBER] = {10, 	60, 	2, 		10, 	1};
   uint32_t dbg_intervals[CM_INTERV_NUMBER] = {5, 	10, 	2, 		10, 	1};
+	uint8_t gmpp_num;
+	uint16_t pwr_mask;
+	uint32_t mask;
+	uint8_t zip_dep_ad_num, dep_ad_num, device_mask;
   //
   cmd_num = pcu_cmd_extraction(cm_ptr->pcu_ptr);
   if (cmd_num){
@@ -251,6 +255,43 @@ void cm_pcu_command_interface_handler(typeCMModel *cm_ptr)
       case 0x0101:
         printf("%s: pcu cmd <0x%04X> \n", now(), cmd_num);
         break;
+      case 0x0102:
+        __main_base_init();
+        // архивация памяти
+        fr_mem_format(&cm.mem);
+        fr_mem_set_rd_ptr(&cm.mem, 0);
+        fr_mem_set_wr_ptr(&cm.mem, 0);
+        cm.ctrl.rst_cnter = 0;
+        cm.global_frame_num = 0;
+        pwr_update_default_state(&pwr);
+        printf("%s: pcu cmd <0x%04X> - cm init \n", now(), cmd_num);
+        break;
+      case 0x0103:
+        fr_mem_format(&cm.mem);
+        fr_mem_set_rd_ptr(&cm.mem, 0);
+        fr_mem_set_wr_ptr(&cm.mem, 0);
+        cm.global_frame_num = 0;
+        printf("%s: pcu cmd <0x%04X> - mem init \n", now(), cmd_num);
+        break;
+      case 0x0104:
+        fr_mem_set_rd_ptr_to_defense_area(&cm_ptr->mem);
+        printf("%s: pcu cmd <0x%04X> - set rd_ptr to prot \n", now(), cmd_num);
+        break;
+      case 0x0105:
+        cm_constant_mode_ena(cm_ptr, 0x01);
+        mpp_constant_mode(&mpp[0], 0x01); // команда широковещательная
+        for (uint8_t num = 0; num < (DEP_AD8 - DEP_AD1); num++) dep_constant_mode(&dep_ad[num], 0x01);
+        mkkd_constant_mode(&mkkd, 0x01);
+        printf("%s: pcu cmd <0x%04X> - set const_mode \n", now(), cmd_num);
+        break;
+      case 0x0106:
+        cm_constant_mode_ena(cm_ptr, 0x00);
+        mpp_constant_mode(&mpp[0], 0x00); // команда широковещательная
+        for (uint8_t num = 0; num < (DEP_AD8 - DEP_AD1); num++) dep_constant_mode(&dep_ad[num], 0x00);
+        mkkd_constant_mode(&mkkd, 0x00);
+        printf("%s: pcu cmd <0x%04X> - release const_mode \n", now(), cmd_num);
+        break;
+      //
 			case 0x0201:
 				cm_set_speedy_mode(cm_ptr, 0xFFFF, 0);
         for (uint8_t i_num = 0; i_num < CM_INTERV_NUMBER; i_num++) {cm_set_interval_value(cm_ptr, i_num, default_intervals[i_num]);}
@@ -269,6 +310,51 @@ void cm_pcu_command_interface_handler(typeCMModel *cm_ptr)
 			case 0x0204:
         cm_set_speedy_mode(cm_ptr, 0xFFFF, 3600);
         printf("%s: pcu cmd <0x%04X> - speedy mode \n", now(), cmd_num);
+        break;
+      //
+      case 0x0301:
+      case 0x0302:
+      case 0x0303:
+	
+				gmpp_num = cmd_num & 0x0F;
+        if (gmpp_num== 1) mask = GMPP_DEVICE_WORK_MASK_DEFAULT; pwr_mask = 0x03;
+        if (gmpp_num == 1) mask = GMPP_DEVICE_WORK_MASK_DEFAULT; pwr_mask = 0x03;
+        if (gmpp_num == 1) mask = (GMPP_DEVICE_WORK_MASK_DEFAULT & ~(0x0F)) | 0x0C; pwr_mask = 0x0C;
+        gmpp_set_redirection_array(&gmpp, mask);
+        //
+        pwr_on_off_by_num(&pwr, PWR_MPP1, (pwr_mask >> 0) & 0x01);
+        pwr_on_off_by_num(&pwr, PWR_MPP2, (pwr_mask >> 1) & 0x01);
+        pwr_on_off_by_num(&pwr, PWR_MPP3, (pwr_mask >> 2) & 0x01);
+        pwr_on_off_by_num(&pwr, PWR_MPP4, (pwr_mask >> 3) & 0x01);
+        //
+        printf("%s: pcu cmd <0x%04X> - set MPP to mask <0x%02X> with pwr mask <0x%02X> \n", now(), cmd_num, mask, pwr_mask);
+        break;
+      //
+      case 0x0401:
+      case 0x0402:
+      case 0x0403:
+      case 0x0404:
+      case 0x0405:
+      case 0x0406:
+      case 0x0501:
+      case 0x0502:
+      case 0x0503:
+      case 0x0504:
+      case 0x0505:
+      case 0x0506:
+        zip_dep_ad_num = (((cmd_num >> 4) & 0x0F) == 4) ? 1 : 2;
+        dep_ad_num = cmd_num & 0x0F;
+        device_mask = gmpp.gmpp_used_device_flag & (~((1 << (dep_ad_num - 1)) << 4)) | ((1 << (zip_dep_ad_num-1)) << 10);
+        gmpp_set_redirection_array(&gmpp, device_mask);
+        printf("%s: pcu cmd <0x%04X> - use DEP_AD zip device <%d> to device <%d> \n", now(), cmd_num, zip_dep_ad_num, dep_ad_num);
+        break;
+      case 0x0407:
+      case 0x0507:
+        zip_dep_ad_num = (((cmd_num >> 4) & 0x0F) == 4) ? 0 : 1;
+        dep_ad_num = cmd_num & 0x0F;
+        device_mask = (gmpp.gmpp_used_device_flag & ~0x0FF0) | (GMPP_DEVICE_WORK_MASK_DEFAULT & 0x0FF0);
+        gmpp_set_redirection_array(&gmpp, device_mask);
+        printf("%s: pcu cmd <0x%04X> - use DEP_AD devices to default \n", now(), cmd_num);
         break;
       default:
         printf("%s: unknown pcu cmd \n", now());
