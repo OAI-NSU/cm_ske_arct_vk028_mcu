@@ -192,5 +192,4 @@ void gmpp_win_mko_frame_forming(typeGEN_MPP_Struct* gmpp_ptr);
 void gmpp_fifo_init(typeGEN_MPP_Struct* gmpp_ptr);
 int8_t gmpp_write_fifo(typeGEN_MPP_Struct* gmpp_ptr, typeFrameStruct* frame);
 int8_t gmpp_read_fifo(typeGEN_MPP_Struct* gmpp_ptr, typeFrameStruct* frame);
-
 #endif
