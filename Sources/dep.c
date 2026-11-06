@@ -163,10 +163,10 @@ void dep_mko_frame_forming(typeDEPStruct* dep_ptr)
 	for (i=0; i<6; i++){
 		dep_ptr->mko_frame.dep.meas[i].Evalue_dep1 = dep_ptr->frame.dep.meas[i].Evalue_dep1;
 		dep_ptr->mko_frame.dep.meas[i].Evalue_dep2 = dep_ptr->frame.dep.meas[i].Evalue_dep2;
-		dep_ptr->mko_frame.dep.meas[i].Dvalue_dep1 = dep_ptr->frame.dep.meas[i].Temp_dep1;
-		dep_ptr->mko_frame.dep.meas[i].Dvalue_dep2 = dep_ptr->frame.dep.meas[i].Temp_dep2;
-		dep_ptr->mko_frame.dep.meas[i].Temp_dep1 = dep_ptr->frame.dep.meas[i].Dvalue_dep1;
-		dep_ptr->mko_frame.dep.meas[i].Temp_dep2 = dep_ptr->frame.dep.meas[i].Dvalue_dep2;
+		dep_ptr->mko_frame.dep.meas[i].Dvalue_dep1 = dep_ptr->frame.dep.meas[i].Dvalue_dep1;
+		dep_ptr->mko_frame.dep.meas[i].Dvalue_dep2 = dep_ptr->frame.dep.meas[i].Dvalue_dep2;
+		dep_ptr->mko_frame.dep.meas[i].Temp_dep1 = dep_ptr->frame.dep.meas[i].Temp_dep1;
+		dep_ptr->mko_frame.dep.meas[i].Temp_dep2 = dep_ptr->frame.dep.meas[i].Temp_dep2;
 	}
 	//
 	dep_ptr->mko_frame.dep.change_int_num = dep_ptr->frame.dep.change_int_num;

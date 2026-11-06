@@ -27,7 +27,7 @@ enum dep_mode_enum
 };
 
 // структуры данных
-#pragma pack(push, 2)
+#pragma pack(push, 1)
 
 /** 
   * @brief  структура для хранения и пересчета данных ДЭП
@@ -45,11 +45,11 @@ typedef struct
 typedef struct
 {
     uint16_t Evalue_dep1;     //+0
-    uint8_t Dvalue_dep1;      //+2
     int8_t Temp_dep1;      //+3
+    uint8_t Dvalue_dep1;      //+2
     uint16_t Evalue_dep2;     //+4
-    uint8_t Dvalue_dep2;      //+6
     int8_t Temp_dep2;      //+7
+    uint8_t Dvalue_dep2;      //+6
 }typeDEPAcqValue;             //8
 
 /** 
