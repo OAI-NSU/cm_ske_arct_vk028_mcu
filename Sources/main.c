@@ -25,7 +25,7 @@
 //***Общие настройки***//
 
 //версия прошивки
-#define CM_SW_VERSION 			  "0.13"
+#define CM_SW_VERSION 			  "0.14"
 // номер устройства
 #define FRAME_DEV_ID 			    235 // 235 236 237 238 239
 #define FRAME_DEV_ID_ALT 			236 // дополнительный dev_id для расширения пула типов кадров

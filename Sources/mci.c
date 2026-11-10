@@ -40,6 +40,8 @@ void mci_init(typeMCIStruct *mci_ptr)
   mci_ptr->timeout_us[1] = 0;
   mci_ptr->reinit_done[0] = 0;
   mci_ptr->reinit_done[1] = 0;
+  mci_ptr->mci_need_to_clear[0] = 0;
+  mci_ptr->mci_need_to_clear[1] = 0;
   memset((uint8_t*)mci_ptr->transaction_bit_cnter, 0x00, sizeof(mci_ptr->transaction_bit_cnter));
   memset((uint8_t*)mci_ptr->transaction_bit_cnter_num, 0x00, sizeof(mci_ptr->transaction_bit_cnter_num));
   /* SPI1 */
@@ -143,12 +145,15 @@ uint8_t mci_tx_preparation(typeMCIStruct *mci_ptr, uint64_t interval_us)
       mci_ptr->transaction_bit_cnter_num[mci_num] = (++mci_ptr->transaction_bit_cnter_num[mci_num]) % 8;
       mci_ptr->transaction_bit_cnter[mci_num][mci_ptr->transaction_bit_cnter_num[mci_num]] = 0;
       mci_ptr->transaction_cnter[mci_num]++;
-      mci_clean_buf(mci_ptr, mci_num);
-      // блок подготовки новых данных
-      mci_fill_buf(mci_ptr, mci_num);
+      if (mci_ptr->mci_need_to_clear[mci_num]){
+        mci_ptr->mci_need_to_clear[mci_num] = 0;
+        mci_clean_buf(mci_ptr, mci_num);
+        mci_fill_buf(mci_ptr, mci_num);
+      }
       mci_reinit_spi(mci_ptr, mci_num);
-      if (mci_num == 0) NVIC_EnableIRQ(SPI1_TX_IRQn);
-      else if (mci_num == 1) NVIC_EnableIRQ(SPI3_TX_IRQn);
+      //
+      NVIC_EnableIRQ( SPI1_TX_IRQn );
+      NVIC_EnableIRQ( SPI3_TX_IRQn );
       NVIC_EnableIRQ( ETMR0_IRQn );
     }
   } 
@@ -236,6 +241,9 @@ void mci_spi_tx_irq_handler(typeMCIStruct *mci_ptr, int spi_num)
     if(mci_ptr->buffer[spi_num].rd_ptr >= sizeof(type_MCI_FRAME_BUFFER))  {
 			mci_ptr->buffer[spi_num].rd_ptr = 0;
 		}
+    if (mci_ptr->buffer[spi_num].rd_ptr >= 6){
+      mci_ptr->mci_need_to_clear[spi_num] = 1;
+    }
   }
 	//
 	if (mci_ptr->reinit_done[spi_num]) {
