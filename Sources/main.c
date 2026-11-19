@@ -25,7 +25,7 @@
 //***Общие настройки***//
 
 //версия прошивки
-#define CM_SW_VERSION 			  "0.14"
+#define CM_SW_VERSION 			  "0.15"
 // номер устройства
 #define FRAME_DEV_ID 			    235 // 235 236 237 238 239
 #define FRAME_DEV_ID_ALT 			236 // дополнительный dev_id для расширения пула типов кадров
@@ -85,6 +85,7 @@ void __main_init_peripheral_modules(void)
 {
 	// настройки каналов МПП
 	uint32_t mpp_offsets_array[MPP_DEV_NUM] = MPP_DEF_OFFSET;
+  uint32_t dep_rp_offset[DEP_AD8-DEP_AD1+1] = {0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30};
 	uint32_t mpp_ib_id[MPP_DEV_NUM] = MPP_ID;
 	uint32_t mpp_ch_num[MPP_DEV_NUM] = MPP_CHAN_NUM;
 	float mpp_ch_k[MPP_DEV_NUM] = MPP_CHAN_K;
@@ -99,6 +100,14 @@ void __main_init_peripheral_modules(void)
                                               CM_FR_TYPE_ALT_DEP_AD_6_DEP, 
                                               CM_FR_TYPE_ALT_DEP_AD_7_DEP, 
                                               CM_FR_TYPE_ALT_DEP_AD_8_DEP};
+  uint32_t dep_rp_sa[DEP_AD8 - DEP_AD1 + 1] = {  CM_FR_TYPE_ALT_DEP_AD_1_RP, 
+                                              CM_FR_TYPE_ALT_DEP_AD_2_RP, 
+                                              CM_FR_TYPE_ALT_DEP_AD_3_RP, 
+                                              CM_FR_TYPE_ALT_DEP_AD_4_RP, 
+                                              CM_FR_TYPE_ALT_DEP_AD_5_RP, 
+                                              CM_FR_TYPE_ALT_DEP_AD_6_RP, 
+                                              CM_FR_TYPE_ALT_DEP_AD_7_RP, 
+                                              CM_FR_TYPE_ALT_DEP_AD_8_RP};
 
 	uint8_t uint8_var = 0;
 	/**
@@ -136,10 +145,12 @@ void __main_init_peripheral_modules(void)
               dep_id[uint8_var - DEP_AD1], 
               FRAME_DEV_ID_ALT,
               dep_sa[uint8_var - DEP_AD1],
+              dep_rp_sa[uint8_var - DEP_AD1],
               cm.ib_ptr,
               cm.mko_bc_ptr,
               &cm.global_frame_num,
-              DEP_MODE_MKO );
+              DEP_MODE_MKO,
+              dep_rp_offset[uint8_var - DEP_AD1]);
   }
 }
 

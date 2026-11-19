@@ -69,6 +69,8 @@ typedef struct
   uint32_t status;
   uint32_t state;
   uint32_t half_set;
+  uint32_t presence;
+  uint32_t absence;
   // состояния по умолчанию для применения после инициализации
   uint8_t def_state[PWR_CH_NUMBER];
   uint8_t def_hs[PWR_CH_NUMBER];

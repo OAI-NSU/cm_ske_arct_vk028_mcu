@@ -41,7 +41,7 @@
 #define GMPP_WIN_RESERVED_SIZE                \
     (52 - GMPP_WIN_REC_NUM * GMPP_WIN_REC_SIZE)
 
-#define GMPP_DEVICE_WORK_MASK_DEFAULT         (0x3F3)
+#define GMPP_DEVICE_WORK_MASK_DEFAULT         (0x3F0F)
 
 #if GMPP_MATRIX_RESERVED_SIZE < 0
 #error "Matrix rows exceed the 52-byte frame payload"

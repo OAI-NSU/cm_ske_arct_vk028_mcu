@@ -9,10 +9,18 @@
 #include "timers.h"
 #include "task_planner.h"
 
+//*** Defines ***//
+#ifndef MIN
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
+#ifndef MAX
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
+#endif
+
 // дефайны для переменных
 #define IB_UART_BAUDRATE                  125000
 
-#define IB_STARTUP_TIMEOUT_MS             5000
+#define IB_STARTUP_TIMEOUT_MS             10000
 #define IB_PROCESS_PERIOD                 100
 //
 #define IB_UART_TIMEOUT_MS							  15
@@ -51,7 +59,7 @@
 #define MB_TRANSACTION_READ					      0x01
 #define MB_TRANSACTION_IDLE 				      0x00
 
-#define MB_BUFFER_SIZE                    128
+#define MB_BUFFER_SIZE                    256
 
 
 #pragma pack(push, 2)
@@ -111,7 +119,7 @@ typedef struct
   uint8_t global_dbg_flag;
   //
   uint64_t last_call_time_us;
-  uint64_t call_interval_us;
+  uint64_t call_interval_us; 
 } typeIBStruct;
 
 #pragma pack(pop)

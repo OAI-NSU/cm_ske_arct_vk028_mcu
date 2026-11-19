@@ -76,6 +76,8 @@ typedef struct
   // переменные отображения состояния канала
   uint8_t state;      //! состояние канала: 0 - выключен, 1 - включен
   uint8_t status;     //! статус канала: 0 - норма, 1 - ошибка
+  uint8_t presence;   //! наличие прибора определяемое по потреблению: 1 - присутствует, 0 - неопределенность
+  uint8_t absence;    //! отсутствие прибора определяемое по потреблению: 1 - отсутствует, 0 - неопределенность
   uint8_t half_set;   //! состояние каналов с полукомплектом: 0 - первый полукомплект, 1 - второй полукомплект
   uint8_t error_cnt;  
   uint8_t adc_ch_num;
@@ -90,6 +92,8 @@ typedef struct
   typePwrChTimeoutCtrl pulse_timeout, ctrl_timeout;
   // граница тока для срабатывания защиты/сигнализации по току
   float current_bound_mA; 
+  float presence_bound_mA; 
+  float absence_bound_mA; 
   // переменные получения параметров канала
   float curr_a, curr_b;   //! коэффициенты пересчета сырых показаний АЦП в значения тока в мА
   float current_fp_mA;    //! значение тока в мА
@@ -97,7 +101,20 @@ typedef struct
 }typePowerCh;
 
 //
-int8_t pwr_ch_init(typePowerCh* pwr_ch_ptr, const char *alias, uint8_t type, uint8_t auto_control, uint8_t hs_ch_mode, float bound_mA, float A, float B, type_GPIO_OAI_cm *io_ptr, typeADCStruct *adc_ptr, uint8_t* io_cfg, uint8_t* adc_cfg);
+int8_t pwr_ch_init(	typePowerCh* pwr_ch_ptr, 
+                    const char *alias, 
+                    uint8_t type, 
+                    uint8_t auto_control, 
+                    uint8_t hs_ch_mode, 
+                    float bound_mA, 
+                    float presence_ma,
+                    float absence_ma,
+                    float A, 
+                    float B, 
+                    type_GPIO_OAI_cm *io_ptr, 
+                    typeADCStruct *adc_ptr, 
+                    uint8_t* io_cfg, 
+                    uint8_t* adc_cfg);
 uint8_t pwr_ch_process(typePowerCh* pwr_ch_ptr, uint32_t interval_ms);
 
 //

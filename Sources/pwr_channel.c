@@ -26,7 +26,20 @@
  * @param adc_cfg список каналов adc для получения информации о канале
  * @return int8_t
  */
-int8_t pwr_ch_init(typePowerCh* pwr_ch_ptr, const char *alias, uint8_t type, uint8_t auto_control, uint8_t hs_ch_mode, float bound_mA, float A, float B, type_GPIO_OAI_cm *io_ptr, typeADCStruct *adc_ptr, uint8_t* io_cfg, uint8_t* adc_cfg)
+int8_t pwr_ch_init(	typePowerCh* pwr_ch_ptr, 
+					const char *alias, 
+					uint8_t type, 
+					uint8_t auto_control, 
+					uint8_t hs_ch_mode, 
+					float bound_mA, 
+					float presence_ma,
+					float absence_ma,
+					float A, 
+					float B, 
+					type_GPIO_OAI_cm *io_ptr, 
+					typeADCStruct *adc_ptr, 
+					uint8_t* io_cfg, 
+					uint8_t* adc_cfg)
 {
 	memcpy(pwr_ch_ptr->alias, alias, sizeof(pwr_ch_ptr->alias));
 	//
@@ -36,6 +49,8 @@ int8_t pwr_ch_init(typePowerCh* pwr_ch_ptr, const char *alias, uint8_t type, uin
 	//
 	pwr_ch_ptr->state = 0x00;
 	pwr_ch_ptr->status = 0x00;
+	pwr_ch_ptr->presence = 0x00;
+	pwr_ch_ptr->absence = 0x00;
 	pwr_ch_ptr->half_set = 0x00;
 	pwr_ch_ptr->adc_ch_num = adc_cfg[0];
 	//
@@ -43,6 +58,8 @@ int8_t pwr_ch_init(typePowerCh* pwr_ch_ptr, const char *alias, uint8_t type, uin
 	pwr_ch_ptr->adc_ptr = adc_ptr;
 	//
 	pwr_ch_ptr->current_bound_mA = bound_mA;
+	pwr_ch_ptr->presence_bound_mA = presence_ma;
+	pwr_ch_ptr->absence_bound_mA = absence_ma;
 	//
 	pwr_ch_ptr->curr_a = A;
 	pwr_ch_ptr->curr_b = B;
@@ -100,6 +117,15 @@ uint8_t pwr_ch_process(typePowerCh* pwr_ch_ptr, uint32_t interval_ms)
 			ret_val = 0;
 		}
 	}
+	if (pwr_ch_ptr->state){
+		pwr_ch_ptr->presence 	= ((pwr_ch_ptr->current_fp_mA >= pwr_ch_ptr->presence_bound_mA ) && (pwr_ch_ptr->presence_bound_mA != 0)) ? 1 : 0;
+		pwr_ch_ptr->absence 	= ((pwr_ch_ptr->current_fp_mA < pwr_ch_ptr->absence_bound_mA ) && (pwr_ch_ptr->absence_bound_mA != 0)) ? 1 : 0;
+	}
+	else {
+		pwr_ch_ptr->presence	= 0;
+		pwr_ch_ptr->absence 	= 0;
+	}
+
 	return ret_val;
 }
 

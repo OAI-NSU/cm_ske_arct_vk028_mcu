@@ -114,7 +114,7 @@ int8_t gmpp_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterface
 	else {
 		//
 	}
-	// сбор данных матрицы
+	// сбор данных матрицы МПП
 	for(uint8_t mpp_num = 0; mpp_num < GMPP_DEVICE_NUM; mpp_num++){
 		mpp_id = gmpp_ptr->device_list_id[mpp_num];
 		if (interface->event[mpp_id] & GMPP_EVENT_MATRIX_REC_DATA_READY){
@@ -122,7 +122,7 @@ int8_t gmpp_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterface
 			interface->event[mpp_id] &= ~GMPP_EVENT_MATRIX_REC_DATA_READY;
 		}
 	}
-	// сбор данных окон
+	// сбор данных окон МПП
 	for(uint8_t mpp_num = 0; mpp_num < GMPP_DEVICE_NUM; mpp_num++){
 		mpp_id = gmpp_ptr->device_list_id[mpp_num];
 		if (interface->event[mpp_id] & GMPP_EVENT_WINDOW_REC_DATA_READY){

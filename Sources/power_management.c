@@ -27,12 +27,16 @@ void pwr_init(typePower* pwr_ptr, typeADCStruct* adc_ptr, type_GPIO_OAI_cm *io_p
 	float r_sh_arr[PWR_CH_NUMBER] = PWR_CAL_RES_SHUNT_OHM;
 	float r_fb_arr[PWR_CH_NUMBER] = PWR_CAL_FB_SHUNT_OHM;
 	uint16_t bound_arr[PWR_CH_NUMBER] = PWR_CURRENT_BOUND;
+	uint16_t presence_arr[PWR_CH_NUMBER] = PWR_CURRENT_PRESENCE_BOUND;
+	uint16_t absence_arr[PWR_CH_NUMBER] = PWR_CURRENT_ABSENCE_BOUND;
 	//
 	uint8_t io_cfg[PWR_CH_NUMBER][5] = PWR_GPIO_PORT_CFG;
 	uint8_t adc_cfg[PWR_CH_NUMBER][1] = PWR_ADC_CFG;
 	//
 	pwr_ptr->state = 0x0000;
 	pwr_ptr->status = 0x0000;
+	pwr_ptr->presence = 0x0000;
+	pwr_ptr->absence = 0x0000;
 	pwr_ptr->half_set = 0x0000;
 	//
 	pwr_ptr->global_busy = 0x00;
@@ -54,7 +58,7 @@ void pwr_init(typePower* pwr_ptr, typeADCStruct* adc_ptr, type_GPIO_OAI_cm *io_p
 			break;
 		}
 		sprintf(alias, "pwr ch %d", i);
-		pwr_ch_init(&pwr_ptr->ch[i], alias,  type_arr[i], auto_control_arr[i], double_out[i], bound_arr[i], curr_a, curr_b, io_ptr, adc_ptr, io_cfg[i], adc_cfg[i]);
+		pwr_ch_init(&pwr_ptr->ch[i], alias,  type_arr[i], auto_control_arr[i], double_out[i], bound_arr[i], presence_arr[i], absence_arr[i], curr_a, curr_b, io_ptr, adc_ptr, io_cfg[i], adc_cfg[i]);
 	}
 	// задание очереди инициализации каналов питания
 	pwr_ptr->initialisation_flag = 1;
@@ -201,16 +205,20 @@ void pwr_step_process(typePower* pwr_ptr, uint32_t interval_ms)
  */
 void pwr_synchronize_state_and_status(typePower* pwr_ptr)
 {
-	uint32_t state=0, status=0, half_set=0;
+	uint32_t state=0, status=0, half_set=0, presence=0, absence=0;
 	uint8_t ch;
 	for (ch=PWR_BE; ch<PWR_CH_NUMBER; ch++){
 		state |= (pwr_ptr->ch[ch].state & 0x01) << ch;
 		status |= (pwr_ptr->ch[ch].status & 0x01) << ch;
 		half_set |= (pwr_ptr->ch[ch].half_set & 0x01) << ch;
+		presence |= (pwr_ptr->ch[ch].presence & 0x01) << ch;
+		absence |= (pwr_ptr->ch[ch].absence & 0x01) << ch;
 	}
 	pwr_ptr->state = state;
 	pwr_ptr->status = status;
 	pwr_ptr->half_set = half_set; 
+	pwr_ptr->presence = presence; 
+	pwr_ptr->absence = absence; 
 }
 
 /**

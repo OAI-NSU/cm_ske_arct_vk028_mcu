@@ -247,6 +247,16 @@
           <WinNumber>2</WinNumber>
           <ItemText>mpp</ItemText>
         </Ww>
+        <Ww>
+          <count>11</count>
+          <WinNumber>2</WinNumber>
+          <ItemText>\\cm_ske_arct_vk028_mcu\Sources/main.c\dep_ad[4].sh_vol-&gt;fd.matrix_rec.time</ItemText>
+        </Ww>
+        <Ww>
+          <count>12</count>
+          <WinNumber>2</WinNumber>
+          <ItemText>\\cm_ske_arct_vk028_mcu\Sources/main.c\dep_ad[4].sh_vol-&gt;fd.matrix_rec.amplitude</ItemText>
+        </Ww>
       </WatchWindow2>
       <MemoryWindow1>
         <Mm>
@@ -287,7 +297,7 @@
         <aLa>0</aLa>
         <aPa1>0</aPa1>
         <AscS4>0</AscS4>
-        <aSer4>0</aSer4>
+        <aSer4>1</aSer4>
         <StkLoc>1</StkLoc>
         <TrcWin>0</TrcWin>
         <newCpu>0</newCpu>

@@ -141,7 +141,7 @@ int8_t ib_run_transaction(typeIBStruct* ib_ptr, uint8_t dev_id, uint8_t f_code, 
 	}
 	// ожидание ответа
 	if ((ib_ptr->transaction_type == MB_TRANSACTION_WRITE) || (ib_ptr->transaction_type == MB_TRANSACTION_READ)){
-		while((timeout <= IB_UART_TIMEOUT_MS) || (ib_ptr->uart.packet_in_waiting(ib_ptr->uart_inst))){
+		while((timeout <= IB_UART_TIMEOUT_MS) || ((ib_ptr->uart.packet_in_waiting(ib_ptr->uart_inst)) && (timeout <= IB_UART_TIMEOUT_MS*3))){
 			timeout += 1;
 			Timer_Delay(1, 1); 
 			if(ib_ptr->uart.packet_ready(ib_ptr->uart_inst))
@@ -153,9 +153,9 @@ int8_t ib_run_transaction(typeIBStruct* ib_ptr, uint8_t dev_id, uint8_t f_code, 
 			//
 			ib_ptr->nans_status |= (1<<dev_id);
 			ib_ptr->nans_counter += 1;
-			if(dev_id == 4){
-				__BKPT(0);
-			}
+			// if(dev_id == 4){
+			// 	__BKPT(0);
+			// }
 		}
 		// //
 		// mko_irq_ena(); // отключение прерываний, которые мешают пакетному приему
@@ -220,8 +220,9 @@ int8_t ib_run_transaction(typeIBStruct* ib_ptr, uint8_t dev_id, uint8_t f_code, 
   */
 uint8_t ib_get_answer_data(typeIBStruct* ib_ptr, uint8_t* buff, uint8_t len)
 {
-	memcpy(buff, (uint8_t*)ib_ptr->rx_frame.data, ib_ptr->rx_frame.byte_cnt);
-	return ib_ptr->rx_frame.byte_cnt;
+	uint8_t r_len = MIN(len, ib_ptr->rx_frame.byte_cnt);
+	memcpy(buff, (uint8_t*)ib_ptr->rx_frame.data, r_len);
+	return r_len;
 }
 
 /**
@@ -235,7 +236,7 @@ uint8_t ib_get_answer_data(typeIBStruct* ib_ptr, uint8_t* buff, uint8_t len)
   */
 int8_t __ib_parsing_rx_data(typeIBStruct* ib_ptr, uint8_t* data, uint8_t leng, uint8_t transaction_type)
 {
-	uint8_t frame_length = 0;
+	uint16_t frame_length = 0;
 	uint16_t crc16_tmp = 0x00;
 	typeModBusFrameStruct* frame;
 	//
@@ -281,12 +282,13 @@ int8_t __ib_parsing_rx_data(typeIBStruct* ib_ptr, uint8_t* data, uint8_t leng, u
 						crc16_tmp = __REVSH(__modbusb_crc16(data, frame_length-2, MB_CRC16_INIT_VAL));
 					break;
 					case MB_F_CODE_16:
+						if (leng < 9) return MB_UART_RX_STATUS_LENGTH;
 						frame->reg_addr = __REVSH (*((uint16_t*)&data[2]));
 						frame->reg_cnt = __REVSH (*((uint16_t*)&data[4]));
 						frame->byte_cnt = data[6];
-						memcpy(frame->data, &data[7], frame->byte_cnt);
-						frame_length = 9 + frame->byte_cnt;
+						frame_length = 9u + frame->byte_cnt;
 						if (frame_length > leng) return MB_UART_RX_STATUS_LENGTH;
+						memcpy(frame->data, &data[7], frame->byte_cnt);
 						frame->crc_16 = (data[frame_length-2] << 8) | (data[frame_length-1]);
 						crc16_tmp = __REVSH(__modbusb_crc16(data, frame_length-2, MB_CRC16_INIT_VAL));
 					break;

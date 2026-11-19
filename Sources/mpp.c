@@ -122,7 +122,6 @@ int8_t mpp_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceS
 		//
 		mpp_ptr->current_meas_interval = *(uint16_t*)&interface->shared_mem[64];
 		if((cyclo_get_operation_status(&mpp_ptr->meas_cyclo) == 0) && (mpp_ptr->mpp_max_survey_ena)){
-			if(mpp_ptr)
 			mpp_mtrx_max_val_get(mpp_ptr);
 			mpp_rp_mtrx_val_process(mpp_ptr, mpp_ptr->matrix_raw.amplitude);
 			// matrix data transmit to general block
