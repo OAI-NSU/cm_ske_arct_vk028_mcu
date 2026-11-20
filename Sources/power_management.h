@@ -98,6 +98,7 @@ int8_t pwr_process_tp(void* ctrl_struct, uint64_t time_us, typeProcessInterfaceS
 void pwr_step_process(typePower* pwr_ptr, uint32_t interval_ms);
 void pwr_synchronize_state_and_status(typePower* pwr_ptr);
 void pwr_on_off_by_num(typePower* pwr_ptr, uint8_t num, uint8_t state);
+void pwr_set_hs_by_num(typePower* pwr_ptr, uint8_t num, uint8_t state);
 void pwr_status_reset_by_num(typePower* pwr_ptr, uint8_t num);
 void pwr_set_state(typePower* pwr_ptr, uint32_t state);
 void pwr_set_bound(typePower* pwr_ptr, uint8_t num, uint16_t bound);

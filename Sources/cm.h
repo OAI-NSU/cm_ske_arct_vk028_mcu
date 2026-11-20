@@ -43,8 +43,8 @@ enum cm_interval_list
 	CM_INTERV_NUMBER
 };
 
-// #define DEFAULT_CM_INTERV_VALUES_S				{10, 	120, 	2, 		10, 	1, 		120}
-#define DEFAULT_CM_INTERV_VALUES_S					{5, 	5,	 	2, 		10, 	1, 		120}
+#define DEFAULT_CM_INTERV_VALUES_S				{10, 	120, 	2, 		10, 	1, 		120}
+// #define DEFAULT_CM_INTERV_VALUES_S					{5, 	5,	 	2, 		10, 	1, 		120}
 #define DEFAULT_CM_DEFAULT_START_TIME_S				{15, 	15,		16, 	16, 	16, 	120}
 
 

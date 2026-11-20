@@ -190,6 +190,11 @@
           <WinNumber>1</WinNumber>
           <ItemText>dep_ad</ItemText>
         </Ww>
+        <Ww>
+          <count>8</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>\\cm_ske_arct_vk028_mcu\Sources/main.c\gmpp.gmpp_used_device_flag</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>
@@ -266,6 +271,11 @@
           <count>14</count>
           <WinNumber>2</WinNumber>
           <ItemText>cm.mem.read_ptr</ItemText>
+        </Ww>
+        <Ww>
+          <count>15</count>
+          <WinNumber>2</WinNumber>
+          <ItemText>\\cm_ske_arct_vk028_mcu\Sources/main.c\gmpp.gmpp_used_device_flag</ItemText>
         </Ww>
       </WatchWindow2>
       <MemoryWindow1>

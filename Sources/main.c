@@ -25,7 +25,7 @@
 //***Общие настройки***//
 
 //версия прошивки
-#define CM_SW_VERSION 			  "0.16"
+#define CM_SW_VERSION 			  "0.17"
 // номер устройства
 #define FRAME_DEV_ID 			    235 // 235 236 237 238 239
 #define FRAME_DEV_ID_ALT 			236 // дополнительный dev_id для расширения пула типов кадров
@@ -256,9 +256,9 @@ void cm_pcu_command_interface_handler(typeCMModel *cm_ptr)
   uint32_t intervals_60[CM_INTERV_NUMBER] = {10, 	60, 	2, 		10, 	1};
   uint32_t dbg_intervals[CM_INTERV_NUMBER] = {5, 	10, 	2, 		10, 	1};
 	uint8_t gmpp_num;
-	uint16_t pwr_mask;
+	uint16_t pwr_mask, device_mask;
 	uint32_t mask;
-	uint8_t zip_dep_ad_num, dep_ad_num, device_mask;
+	uint8_t zip_dep_ad_num, dep_ad_num, halfset_num;
   //
   cmd_num = pcu_cmd_extraction(cm_ptr->pcu_ptr);
   if (cmd_num){
@@ -326,11 +326,11 @@ void cm_pcu_command_interface_handler(typeCMModel *cm_ptr)
       case 0x0301:
       case 0x0302:
       case 0x0303:
-	
 				gmpp_num = cmd_num & 0x0F;
-        if (gmpp_num== 1) mask = GMPP_DEVICE_WORK_MASK_DEFAULT; pwr_mask = 0x03;
-        if (gmpp_num == 1) mask = GMPP_DEVICE_WORK_MASK_DEFAULT; pwr_mask = 0x03;
-        if (gmpp_num == 1) mask = (GMPP_DEVICE_WORK_MASK_DEFAULT & ~(0x0F)) | 0x0C; pwr_mask = 0x0C;
+        mask = gmpp.gmpp_used_device_flag & (~0xFF);
+        if (gmpp_num == 1) { mask |= (GMPP_DEVICE_WORK_MASK_DEFAULT & 0xFF); pwr_mask = 0x03; }
+        if (gmpp_num == 2) { mask |= (GMPP_DEVICE_WORK_MASK_DEFAULT & 0xFF); pwr_mask = 0x03; }
+        if (gmpp_num == 3) { mask |= ((~GMPP_DEVICE_WORK_MASK_DEFAULT) & 0xFF);  pwr_mask = 0x0C; };
         gmpp_set_redirection_array(&gmpp, mask);
         //
         pwr_on_off_by_num(&pwr, PWR_MPP1, (pwr_mask >> 0) & 0x01);
@@ -353,19 +353,56 @@ void cm_pcu_command_interface_handler(typeCMModel *cm_ptr)
       case 0x0504:
       case 0x0505:
       case 0x0506:
-        zip_dep_ad_num = (((cmd_num >> 4) & 0x0F) == 4) ? 1 : 2;
+        zip_dep_ad_num = (((cmd_num >> 8) & 0x0F) == 4) ? 1 : 2;
         dep_ad_num = cmd_num & 0x0F;
-        device_mask = gmpp.gmpp_used_device_flag & (~((1 << (dep_ad_num - 1)) << 4)) | ((1 << (zip_dep_ad_num-1)) << 10);
+        device_mask = (gmpp.gmpp_used_device_flag & ~(1 << (dep_ad_num - 1 + 8))) | (1 << (zip_dep_ad_num - 1 + 14));
         gmpp_set_redirection_array(&gmpp, device_mask);
         printf("%s: pcu cmd <0x%04X> - use DEP_AD zip device <%d> to device <%d> \n", now(), cmd_num, zip_dep_ad_num, dep_ad_num);
         break;
       case 0x0407:
-      case 0x0507:
-        zip_dep_ad_num = (((cmd_num >> 4) & 0x0F) == 4) ? 0 : 1;
-        dep_ad_num = cmd_num & 0x0F;
-        device_mask = (gmpp.gmpp_used_device_flag & ~0x0FF0) | (GMPP_DEVICE_WORK_MASK_DEFAULT & 0x0FF0);
+        device_mask = (gmpp.gmpp_used_device_flag & ~0xFF00) | (GMPP_DEVICE_WORK_MASK_DEFAULT & 0xFF00);
         gmpp_set_redirection_array(&gmpp, device_mask);
-        printf("%s: pcu cmd <0x%04X> - use DEP_AD devices to default \n", now(), cmd_num);
+        printf("%s: pcu cmd <0x%04X> - use DEP_AD devices to default set\n", now(), cmd_num);
+        break;
+      case 0x0408:
+        printf("%s: pcu cmd <0x%04X> - NU\n", now(), cmd_num);
+        break;
+      case 0x0507:
+        for (uint8_t dep_num = 0; dep_num < (PWR_DEP_AD6 - PWR_DEP_AD1 + 1); dep_num++){
+          pwr_on_off_by_num(&pwr, dep_num + PWR_DEP_AD1, 1);
+        }
+        printf("%s: pcu cmd <0x%04X> - turn on all DEP_AD\n", now(), cmd_num);
+        break;
+      case 0x0508:
+        for (uint8_t dep_num = 0; dep_num < (PWR_DEP_AD6 - PWR_DEP_AD1 + 1); dep_num++){
+          pwr_on_off_by_num(&pwr, dep_num + PWR_DEP_AD1, 0);
+        }
+        printf("%s: pcu cmd <0x%04X> - turn off all DEP_AD \n", now(), cmd_num);
+        break;
+      case 0x0601:
+      case 0x0602:
+      case 0x0603:
+      case 0x0604:
+      case 0x0605:
+      case 0x0606:
+      case 0x0701:
+      case 0x0702:
+      case 0x0703:
+      case 0x0704:
+      case 0x0705:
+      case 0x0706:
+        halfset_num = (((cmd_num >> 8) & 0x0F) == 6) ? 0 : 1;
+        dep_ad_num = (cmd_num & 0x0F);
+        pwr_ch_half_set_choosing(&pwr.ch[(dep_ad_num-1) + PWR_DEP_AD1], halfset_num);
+        printf("%s: pcu cmd <0x%04X> - set DEP_AD <%d> halfset <%d> \n", now(), cmd_num, dep_ad_num, halfset_num);
+        break;
+      case 0x0607:
+      case 0x0608:
+        halfset_num = ((cmd_num & 0x0F) == 7) ? 0 : 1;
+        for (uint8_t dep_num = 0; dep_num < (PWR_DEP_AD6 - PWR_DEP_AD1 + 1); dep_num++){
+          pwr_ch_half_set_choosing(&pwr.ch[dep_num + PWR_DEP_AD1], halfset_num);
+        }
+        printf("%s: pcu cmd <0x%04X> - set all DEP_AD halfset to <%d> \n", now(), cmd_num, halfset_num);
         break;
       default:
         printf("%s: unknown pcu cmd \n", now());
