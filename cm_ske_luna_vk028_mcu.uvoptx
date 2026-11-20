@@ -257,6 +257,16 @@
           <WinNumber>2</WinNumber>
           <ItemText>\\cm_ske_arct_vk028_mcu\Sources/main.c\dep_ad[4].sh_vol-&gt;fd.matrix_rec.amplitude</ItemText>
         </Ww>
+        <Ww>
+          <count>13</count>
+          <WinNumber>2</WinNumber>
+          <ItemText>cm.mem.write_ptr</ItemText>
+        </Ww>
+        <Ww>
+          <count>14</count>
+          <WinNumber>2</WinNumber>
+          <ItemText>cm.mem.read_ptr</ItemText>
+        </Ww>
       </WatchWindow2>
       <MemoryWindow1>
         <Mm>

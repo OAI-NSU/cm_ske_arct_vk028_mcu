@@ -403,6 +403,7 @@ void dep_read_win_data(typeDEPStruct *dep_ptr)
 		else{
 			memset((uint8_t*)&dep_ptr->per_rp_win_frame, 0xFE, sizeof(typeDEP_AD_SELF_RP_Win_FrameUnion));
 		}
+		dep_ptr->win_raw = dep_ptr->per_rp_win_frame.dep.win_rec;
 		dep_ptr->win_flag_ready = 1;
 	}
 }

@@ -158,15 +158,15 @@ typedef  struct
 	uint16_t power_status;				//+26
 	uint16_t power_state;				//+28
 	//
+	uint8_t nans_status;  				//+31 
 	uint8_t nans_counter;  				//+30
-	uint8_t nans_status;  				//+31
-	uint8_t rst_cnter;  				//+32
 	uint8_t cm_status;		  			//+33
+	uint8_t rst_cnter;  				//+32
 	//
 	uint32_t operation_time;  			//+34
 	//
-	int8_t stm_val;						//+38
 	int8_t mcu_temp;					//+39
+	int8_t stm_val;						//+38
 	//
 	uint16_t read_ptr;					//+40
 	uint16_t write_ptr; 				//+42
