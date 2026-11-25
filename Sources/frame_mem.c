@@ -304,7 +304,7 @@ uint32_t fr_mem_check(typeFRAME_MEM* mem_ptr)
 void fr_mem_format(typeFRAME_MEM* mem_ptr)
 {
     uint32_t time = 0;
-    uint32_t addr=0;
+    uint32_t addr=0, frame_ptr = 0;
     uint8_t fill_frame[FRAM_FRAME_VOLUME_B] = {0};
     //запоминаем время старта
     time = clock_get_time_s();
@@ -312,10 +312,11 @@ void fr_mem_format(typeFRAME_MEM* mem_ptr)
     //создаем базовый филлер для памяти
     memset(fill_frame, 0xFE, FRAM_FRAME_VOLUME_B);
     //
-    for (addr=0; addr<FRAM_VOLUME_FRAMES; addr++) {
+    for (frame_ptr=0; frame_ptr<FR_MEM_WR_RD_PTR_MAX; frame_ptr++) {
         WDRST;
-        *(uint32_t*)&fill_frame[0] = addr;
+        *(uint32_t*)&fill_frame[0] = frame_ptr;
         //сохраняем данные из памяти, пишем тестовый кадр, читаем тестовый кадр, восстанавливаем данные
+        addr = _get_addr_from_ptr(frame_ptr);
         fr_mem_write_any_frame(mem_ptr, addr, fill_frame);
         //
     }
@@ -375,7 +376,7 @@ int8_t fr_mem_param_load(typeFRAME_MEM* mem_ptr, uint8_t* frame)
 uint32_t _get_addr_from_ptr(uint32_t ptr)
 {
     uint32_t addr = 0, mem_num = 0;
-    mem_num = (ptr / FRAM_VOLUME_FRAMES) + 1;
+    mem_num = (ptr / (FRAM_VOLUME_FRAMES - 1)) + 1;
     addr = ptr + mem_num; 
     return addr;
 }

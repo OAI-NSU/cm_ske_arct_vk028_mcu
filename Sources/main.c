@@ -25,7 +25,7 @@
 //***Общие настройки***//
 
 //версия прошивки
-#define CM_SW_VERSION 			  "0.17"
+#define CM_SW_VERSION 			  "0.18"
 // номер устройства
 #define FRAME_DEV_ID 			    235 // 235 236 237 238 239
 #define FRAME_DEV_ID_ALT 			236 // дополнительный dev_id для расширения пула типов кадров
@@ -235,7 +235,8 @@ void __main_base_init(void)
             FRAME_DEV_ID,
             CM_SW_VERSION,
             CM, 
-            &mci);  // инициализация объекта программной модели ЦМ (включает в себя все периферийные модели ЦМ: ВШ, МКО, GPIO, ADC и т.п.)
+            &mci,
+            &gmpp.gmpp_used_device_flag);  // инициализация объекта программной модели ЦМ (включает в себя все периферийные модели ЦМ: ВШ, МКО, GPIO, ADC и т.п.)
 	// включение периферии
 	__main_init_peripheral_modules();
 	// отключение планировщика задач
@@ -371,13 +372,15 @@ void cm_pcu_command_interface_handler(typeCMModel *cm_ptr)
         for (uint8_t dep_num = 0; dep_num < (PWR_DEP_AD6 - PWR_DEP_AD1 + 1); dep_num++){
           pwr_on_off_by_num(&pwr, dep_num + PWR_DEP_AD1, 1);
         }
-        printf("%s: pcu cmd <0x%04X> - turn on all DEP_AD\n", now(), cmd_num);
+        pwr_on_off_by_num(&pwr, PWR_DEP_MKKD, 1);
+        printf("%s: pcu cmd <0x%04X> - turn on all DEP_AD and MKKD\n", now(), cmd_num);
         break;
       case 0x0508:
         for (uint8_t dep_num = 0; dep_num < (PWR_DEP_AD6 - PWR_DEP_AD1 + 1); dep_num++){
           pwr_on_off_by_num(&pwr, dep_num + PWR_DEP_AD1, 0);
         }
-        printf("%s: pcu cmd <0x%04X> - turn off all DEP_AD \n", now(), cmd_num);
+        pwr_on_off_by_num(&pwr, PWR_DEP_MKKD, 0);
+        printf("%s: pcu cmd <0x%04X> - turn off all DEP_AD and MKKD\n", now(), cmd_num);
         break;
       case 0x0601:
       case 0x0602:
@@ -403,6 +406,12 @@ void cm_pcu_command_interface_handler(typeCMModel *cm_ptr)
           pwr_ch_half_set_choosing(&pwr.ch[dep_num + PWR_DEP_AD1], halfset_num);
         }
         printf("%s: pcu cmd <0x%04X> - set all DEP_AD halfset to <%d> \n", now(), cmd_num, halfset_num);
+        break;
+      case 0x0707:
+      case 0x0708:
+        halfset_num = ((cmd_num & 0x0F) == 7) ? 0 : 1;
+        pwr_ch_half_set_choosing(&pwr.ch[PWR_DEP_MKKD], halfset_num);
+        printf("%s: pcu cmd <0x%04X> - set MKKD halfset to <%d> \n", now(), cmd_num, halfset_num);
         break;
       default:
         printf("%s: unknown pcu cmd \n", now());

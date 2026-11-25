@@ -43,7 +43,9 @@ void cm_init(
 				uint16_t device_number, 
 				char* ver_str, 
 				uint16_t frame_type,
-				typeMCIStruct *mci_ptr)
+				typeMCIStruct *mci_ptr,
+				uint32_t *gmpp_used_device_flag_ptr
+			)
 {
 	int8_t load_cfg_state=0;
 	printf("%s: cm init start\n", now());
@@ -58,6 +60,8 @@ void cm_init(
 	cm_ptr->stm_ptr = stm_ptr;
 	cm_ptr->pwr_ptr = pwr_ptr;
 	cm_ptr->mci_ptr = mci_ptr;
+	cm_ptr->gmpp_used_device_flag_ptr = gmpp_used_device_flag_ptr;
+
 	//
 	cm_reset_parameters(cm_ptr);
 	cm_ptr->id = id;
@@ -552,8 +556,6 @@ void cm_frame_forming(typeCMModel* cm_ptr)
 		cm_ptr->frame.sys.body.power_status = cm_ptr->pwr_ptr->status;
 		cm_ptr->frame.sys.body.power_state = cm_ptr->pwr_ptr->state;
 		//
-		cm_ptr->frame.sys.body.sw_version = cm_ptr->sw_version;
-		//
 		cm_ptr->frame.sys.body.nans_status = cm_ptr->ib_ptr->nans_status + (((cm_ptr->mko_bc_ptr->error) ? 1 : 0) << 13);
 		cm_ptr->frame.sys.body.nans_counter = cm_ptr->ib_ptr->nans_counter + cm_ptr->mko_bc_ptr->error_cnt;
 		cm_ptr->frame.sys.body.cm_status = cm_ptr->ctrl.status;
@@ -566,6 +568,11 @@ void cm_frame_forming(typeCMModel* cm_ptr)
 		//
 		cm_ptr->frame.sys.body.read_ptr = cm_ptr->mem.read_ptr;
 		cm_ptr->frame.sys.body.write_ptr = cm_ptr->mem.write_ptr;
+		//
+		cm_ptr->frame.sys.body.sw_version = cm_ptr->sw_version;
+		//
+		cm_ptr->frame.sys.body.gmpp_flags = (uint16_t)(*cm_ptr->gmpp_used_device_flag_ptr & 0xFFFFu);
+		cm_ptr->frame.sys.body.pwr_ch_hs_flags = (uint16_t)((cm_ptr->pwr_ptr->half_set >> PWR_DEP_AD1) & 0xFFFFu);
 	}
 	//
 	cm_ptr->frame.raw.crc16 = frame_crc16((uint8_t*)&cm_ptr->frame.raw, sizeof(typeFrameStruct) - 2);

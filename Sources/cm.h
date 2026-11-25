@@ -173,7 +173,9 @@ typedef  struct
 	//
 	uint16_t sw_version;				//+44
 	//
-	uint8_t reserve[6]; 				//+46
+	uint16_t gmpp_flags; 				//+46
+	uint16_t pwr_ch_hs_flags; 			//+48
+	uint8_t reserve[2]; 				//+50
 }typeCMFrameReport;	//! 52 - общая длина
 
 #pragma pack(pop)
@@ -268,6 +270,7 @@ typedef struct
 	type_SINGLE_GPIO *hs_io_ptr;
 	type_STM_Model *stm_ptr;
 	typeMCIStruct *mci_ptr;
+	uint32_t *gmpp_used_device_flag_ptr;
 	//
 	uint16_t sw_version;
 	//
@@ -290,7 +293,7 @@ typedef struct
 
 #pragma pack(pop)
 //
-void cm_init(
+void cm_init(	
 				typeCMModel* cm_ptr, 
 				uint8_t self_num, 
 				uint8_t id, 
@@ -303,7 +306,8 @@ void cm_init(
 				uint16_t device_number, 
 				char* ver_str, 
 				uint16_t frame_type,
-				typeMCIStruct *mci_ptr
+				typeMCIStruct *mci_ptr,
+				uint32_t *gmpp_used_device_flag_ptr
 			);
 void cm_reset_parameters(typeCMModel* cm_ptr);
 int8_t cm_load_cfg(typeCMModel* cm_ptr);
